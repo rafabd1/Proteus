@@ -1,87 +1,143 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.decisionInputSchema = exports.evidenceInputSchema = exports.hypothesisInputSchema = exports.surfaceInputSchema = exports.roiFactorsSchema = exports.targetContractSchema = exports.agentCodenameSchema = void 0;
-const zod_1 = require("zod");
-exports.agentCodenameSchema = zod_1.z.enum([
-    "argus",
-    "loom",
-    "chaos",
-    "libris",
-    "mimic",
-    "artificer",
-    "skeptic"
-]);
-exports.targetContractSchema = zod_1.z.object({
-    target: zod_1.z.string().min(1),
-    scopeRoot: zod_1.z.string().min(1),
-    inScope: zod_1.z.array(zod_1.z.string()).default([]),
-    outOfScope: zod_1.z.array(zod_1.z.string()).default([]),
-    existingWork: zod_1.z.array(zod_1.z.string()).default([]),
-    primaryImpactClasses: zod_1.z.array(zod_1.z.string()).default([]),
-    hardExclusions: zod_1.z.array(zod_1.z.string()).default([]),
-    assumptions: zod_1.z.array(zod_1.z.string()).default([]),
-    availableTooling: zod_1.z.array(zod_1.z.string()).default([]),
-    credentialsAvailable: zod_1.z.string().default("unknown"),
-    continuousMode: zod_1.z.boolean().default(false),
-    stopOnCandidate: zod_1.z.boolean().default(true)
-});
-exports.roiFactorsSchema = zod_1.z.object({
-    impactPotential: zod_1.z.number().min(0).max(10),
-    externalReachability: zod_1.z.number().min(0).max(10),
-    trustBoundaryDensity: zod_1.z.number().min(0).max(10),
-    recentChangeWeight: zod_1.z.number().min(0).max(10),
-    unexploredInvariantWeight: zod_1.z.number().min(0).max(10),
-    toolingReadiness: zod_1.z.number().min(0).max(10),
-    duplicateRisk: zod_1.z.number().min(0).max(10),
-    expectedBehaviorLikelihood: zod_1.z.number().min(0).max(10),
-    priorExhaustionWeight: zod_1.z.number().min(0).max(10),
-    validationCost: zod_1.z.number().min(0).max(10),
-    lowSignalHistory: zod_1.z.number().min(0).max(10)
-});
-exports.surfaceInputSchema = zod_1.z.object({
-    name: zod_1.z.string().min(1),
-    family: zod_1.z.string().min(1),
-    description: zod_1.z.string().default(""),
-    files: zod_1.z.array(zod_1.z.string()).default([]),
-    symbols: zod_1.z.array(zod_1.z.string()).default([]),
-    entrypoints: zod_1.z.array(zod_1.z.string()).default([]),
-    trustBoundaries: zod_1.z.array(zod_1.z.string()).default([]),
-    runtimeModes: zod_1.z.array(zod_1.z.string()).default([]),
-    status: zod_1.z
-        .enum(["unmapped", "active", "covered", "exhausted", "low_roi", "blocked", "watch"])
-        .default("unmapped"),
-    roi: exports.roiFactorsSchema,
-    revisitCondition: zod_1.z.string().default("")
-});
-exports.hypothesisInputSchema = zod_1.z.object({
-    surfaceId: zod_1.z.number().int().positive().optional(),
-    title: zod_1.z.string().min(1),
-    primitive: zod_1.z.string().default("unknown"),
-    attackerBoundary: zod_1.z.string().default("unknown"),
-    impactClaim: zod_1.z.string().default("unknown"),
-    heuristicFamily: zod_1.z.string().default("unknown"),
-    status: zod_1.z
-        .enum(["live", "candidate", "watchlist", "discarded", "promoted_to_poc", "report_grade"])
-        .default("live"),
-    score: zod_1.z.number().min(0).max(100).default(0),
-    duplicateRisk: zod_1.z.number().min(0).max(10).default(5),
-    expectedBehaviorRisk: zod_1.z.number().min(0).max(10).default(5),
-    validationCost: zod_1.z.number().min(0).max(10).default(5),
-    killCriteria: zod_1.z.string().default(""),
-    revisitCondition: zod_1.z.string().default("")
-});
-exports.evidenceInputSchema = zod_1.z.object({
-    kind: zod_1.z.string().min(1),
-    title: zod_1.z.string().min(1),
-    body: zod_1.z.string().default(""),
-    pathOrUrl: zod_1.z.string().optional(),
-    command: zod_1.z.string().optional()
-});
-exports.decisionInputSchema = zod_1.z.object({
-    entityType: zod_1.z.string().min(1),
-    entityId: zod_1.z.number().int().nonnegative(),
-    decision: zod_1.z.string().min(1),
-    reason: zod_1.z.string().min(1),
-    evidenceIds: zod_1.z.array(zod_1.z.number().int().positive()).default([]),
-    actor: zod_1.z.string().default("coordinator")
-});
+exports.decisionInputSchema = exports.evidenceInputSchema = exports.hypothesisInputSchema = exports.surfaceInputSchema = exports.targetContractSchema = void 0;
+exports.targetContractSchema = {
+    parse(input) {
+        const value = object(input, "target contract");
+        return {
+            target: requiredString(value.target, "target"),
+            scopeRoot: requiredString(value.scopeRoot, "scopeRoot"),
+            inScope: stringArray(value.inScope),
+            outOfScope: stringArray(value.outOfScope),
+            existingWork: stringArray(value.existingWork),
+            primaryImpactClasses: stringArray(value.primaryImpactClasses),
+            hardExclusions: stringArray(value.hardExclusions),
+            assumptions: stringArray(value.assumptions),
+            availableTooling: stringArray(value.availableTooling),
+            credentialsAvailable: optionalString(value.credentialsAvailable, "unknown"),
+            continuousMode: optionalBoolean(value.continuousMode, false),
+            stopOnCandidate: optionalBoolean(value.stopOnCandidate, true)
+        };
+    }
+};
+exports.surfaceInputSchema = {
+    parse(input) {
+        const value = object(input, "surface");
+        return {
+            name: requiredString(value.name, "name"),
+            family: requiredString(value.family, "family"),
+            description: optionalString(value.description, ""),
+            files: stringArray(value.files),
+            symbols: stringArray(value.symbols),
+            entrypoints: stringArray(value.entrypoints),
+            trustBoundaries: stringArray(value.trustBoundaries),
+            runtimeModes: stringArray(value.runtimeModes),
+            status: enumValue(value.status, ["unmapped", "active", "covered", "exhausted", "low_roi", "blocked", "watch"], "unmapped"),
+            roi: parseRoi(value.roi),
+            revisitCondition: optionalString(value.revisitCondition, "")
+        };
+    }
+};
+exports.hypothesisInputSchema = {
+    parse(input) {
+        const value = object(input, "hypothesis");
+        const surfaceId = optionalNumber(value.surfaceId);
+        return {
+            ...(surfaceId === undefined ? {} : { surfaceId }),
+            title: requiredString(value.title, "title"),
+            primitive: optionalString(value.primitive, "unknown"),
+            attackerBoundary: optionalString(value.attackerBoundary, "unknown"),
+            impactClaim: optionalString(value.impactClaim, "unknown"),
+            heuristicFamily: optionalString(value.heuristicFamily, "unknown"),
+            status: enumValue(value.status, ["live", "candidate", "watchlist", "discarded", "promoted_to_poc", "report_grade"], "live"),
+            score: clampNumber(value.score, 0, 100, 0),
+            duplicateRisk: clampNumber(value.duplicateRisk, 0, 10, 5),
+            expectedBehaviorRisk: clampNumber(value.expectedBehaviorRisk, 0, 10, 5),
+            validationCost: clampNumber(value.validationCost, 0, 10, 5),
+            killCriteria: optionalString(value.killCriteria, ""),
+            revisitCondition: optionalString(value.revisitCondition, "")
+        };
+    }
+};
+exports.evidenceInputSchema = {
+    parse(input) {
+        const value = object(input, "evidence");
+        return {
+            kind: requiredString(value.kind, "kind"),
+            title: requiredString(value.title, "title"),
+            body: optionalString(value.body, ""),
+            pathOrUrl: optionalMaybeString(value.pathOrUrl),
+            command: optionalMaybeString(value.command)
+        };
+    }
+};
+exports.decisionInputSchema = {
+    parse(input) {
+        const value = object(input, "decision");
+        return {
+            entityType: requiredString(value.entityType, "entityType"),
+            entityId: requiredNumber(value.entityId, "entityId"),
+            decision: requiredString(value.decision, "decision"),
+            reason: requiredString(value.reason, "reason"),
+            evidenceIds: numberArray(value.evidenceIds),
+            actor: optionalString(value.actor, "coordinator")
+        };
+    }
+};
+function parseRoi(input) {
+    const value = object(input, "roi");
+    return {
+        impactPotential: clampNumber(value.impactPotential, 0, 10, 0),
+        externalReachability: clampNumber(value.externalReachability, 0, 10, 0),
+        trustBoundaryDensity: clampNumber(value.trustBoundaryDensity, 0, 10, 0),
+        recentChangeWeight: clampNumber(value.recentChangeWeight, 0, 10, 0),
+        unexploredInvariantWeight: clampNumber(value.unexploredInvariantWeight, 0, 10, 0),
+        toolingReadiness: clampNumber(value.toolingReadiness, 0, 10, 0),
+        duplicateRisk: clampNumber(value.duplicateRisk, 0, 10, 0),
+        expectedBehaviorLikelihood: clampNumber(value.expectedBehaviorLikelihood, 0, 10, 0),
+        priorExhaustionWeight: clampNumber(value.priorExhaustionWeight, 0, 10, 0),
+        validationCost: clampNumber(value.validationCost, 0, 10, 0),
+        lowSignalHistory: clampNumber(value.lowSignalHistory, 0, 10, 0)
+    };
+}
+function object(input, name) {
+    if (!input || typeof input !== "object" || Array.isArray(input)) {
+        throw new Error(`Invalid ${name}: expected object`);
+    }
+    return input;
+}
+function requiredString(input, name) {
+    if (typeof input !== "string" || input.length === 0)
+        throw new Error(`Missing ${name}`);
+    return input;
+}
+function optionalString(input, fallback) {
+    return typeof input === "string" ? input : fallback;
+}
+function optionalMaybeString(input) {
+    return typeof input === "string" ? input : undefined;
+}
+function optionalBoolean(input, fallback) {
+    return typeof input === "boolean" ? input : fallback;
+}
+function requiredNumber(input, name) {
+    if (typeof input !== "number" || !Number.isFinite(input))
+        throw new Error(`Missing numeric ${name}`);
+    return input;
+}
+function optionalNumber(input) {
+    return typeof input === "number" && Number.isFinite(input) ? input : undefined;
+}
+function clampNumber(input, min, max, fallback) {
+    const value = optionalNumber(input) ?? fallback;
+    return Math.max(min, Math.min(max, value));
+}
+function stringArray(input) {
+    return Array.isArray(input) ? input.filter((item) => typeof item === "string") : [];
+}
+function numberArray(input) {
+    return Array.isArray(input) ? input.filter((item) => typeof item === "number" && Number.isFinite(item)) : [];
+}
+function enumValue(input, allowed, fallback) {
+    return typeof input === "string" && allowed.includes(input) ? input : fallback;
+}

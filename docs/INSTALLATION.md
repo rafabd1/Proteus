@@ -15,7 +15,7 @@ proteus --version
 Expected shape:
 
 ```text
-@rafabd1/proteus 0.1.1
+@rafabd1/proteus 0.1.2
 ```
 
 The GitHub install uses the committed `dist/` runtime, so it does not need to
