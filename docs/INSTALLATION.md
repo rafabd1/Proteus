@@ -8,7 +8,7 @@ Proteus has two install surfaces:
 ## CLI Install From GitHub
 
 ```powershell
-npm install -g https://github.com/rafabd1/Proteus/archive/refs/heads/main.tar.gz
+npm install -g https://codeload.github.com/rafabd1/Proteus/tar.gz/refs/heads/main
 proteus --version
 ```
 
