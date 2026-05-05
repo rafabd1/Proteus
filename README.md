@@ -1,120 +1,335 @@
 # Proteus
 
-Proteus is a planned Codex plugin and local research runtime for
-professional vulnerability research in codebases.
+Proteus is a Codex plugin and local runtime for structured, continuous
+vulnerability research against arbitrary codebases.
 
-The project is designed for deep, efficient, evidence-driven offensive review:
-mapping a target, generating non-obvious hypotheses, delegating focused research
-rounds, validating candidates in realistic labs, and retaining structured memory
-so future rounds do not repeat low-ROI work.
+You give it a target repository. Proteus helps the coordinator map the codebase,
+select high-ROI security surfaces, generate non-obvious exploitability
+hypotheses, delegate bounded specialist fronts, validate candidates in realistic
+labs, and preserve structured memory so future rounds do not repeat low-value
+work.
 
-This is not a generic scanner and not a normal code review workflow. The goal is
-to coordinate realistic exploitability research across large repositories while
-aggressively suppressing weak hypotheses, duplicates, expected behavior, and lab
-artifacts.
+It is not a scanner and not a generic code review checklist. Proteus is built
+for professional bug bounty and offensive codebase research where findings must
+survive realistic attacker modeling, duplicate checks, expected-behavior checks,
+negative controls, and PoC validation without artificial lab help.
 
-## Project Shape
+## What Proteus Adds
 
-```text
-docs/
-  DEVELOPMENT_PLAN.md
-  REQUIREMENTS.md
-  ARCHITECTURE.md
-  MEMORY_MODEL.md
-plugins/
-  proteus/
-    .codex-plugin/plugin.json
-    skills/continuous-vuln-research/SKILL.md
-    templates/
-    scripts/
-```
+- Continuous research loop: observe, map, hypothesize, prioritize, delegate,
+  validate, kill or promote, then replan.
+- Structured memory in `.vros/memory.sqlite`, with Markdown exports for humans.
+- ROI-based surface planning to avoid wandering through the same low-signal
+  areas.
+- Named specialist fronts for repeatable multi-agent research: Argus, Loom,
+  Chaos, Libris, Mimic, Artificer, and Skeptic.
+- Validation gates that aggressively suppress weak hypotheses, duplicates,
+  expected behavior, forced-vulnerable configs, and lab-created bugs.
+- CLI and MCP interfaces, so the same memory and planning operations work from
+  the terminal or through the Codex plugin.
+- Realistic PoC lab scaffolding with attacker model, documented/default config,
+  negative controls, limitations, and evidence capture.
 
-## Core Idea
+## Install
 
-The coordinator follows a fixed research loop:
+Proteus has two install surfaces:
 
-```text
-Observe -> Map -> Hypothesize -> Prioritize -> Delegate -> Validate -> Kill/Promote -> Replan
-```
+- CLI/runtime: `proteus` and `proteus-mcp`
+- Codex plugin: the `continuous-vuln-research` skill plus MCP configuration
 
-Every round must produce a plan, a surface split, validation gates, stop
-conditions, and structured memory updates. The coordinator is explicitly
-responsible for avoiding random wandering, repeated coverage, and superficial
-bug-shaped claims.
+### 1. Install The CLI
 
-Proteus standardizes its research roles with stable codenames:
-
-```text
-Argus: component-level review.
-Loom: macro and chaining analysis.
-Chaos: fuzzing and edge-case generation.
-Libris: docs and contract verification.
-Mimic: runtime, adapter, and environment divergence.
-Artificer: PoC and lab construction.
-Skeptic: adversarial review and finding refutation.
-```
-
-## Current Status
-
-This repository contains the product plan, Codex plugin scaffold, and a working
-Node/TypeScript runtime backed by a local SQLite memory database.
-
-## CLI Quick Start
-
-Install directly from GitHub:
+Proteus currently requires Node.js 24 or newer because it uses `node:sqlite` for
+local structured memory.
 
 ```powershell
 npm install -g https://codeload.github.com/rafabd1/Proteus/tar.gz/refs/heads/main
 proteus --version
 ```
 
-After npm publishing, the shorter registry path is:
+Expected:
+
+```text
+@rafabd1/proteus 0.1.6
+```
+
+On npm versions where GitHub shorthand works reliably, this may also work:
+
+```powershell
+npm install -g github:rafabd1/Proteus
+```
+
+After publishing to npm, the intended registry install is:
 
 ```powershell
 npm install -g @rafabd1/proteus
 ```
 
-Install the Codex plugin marketplace:
+### 2. Add The Codex Plugin
 
 ```powershell
 codex plugin marketplace add rafabd1/Proteus
 ```
 
-Development setup:
+Then install or enable the `proteus` plugin from Codex's plugin UI if your host
+does not install marketplace defaults automatically.
+
+Invoke the skill with your host's plugin syntax. In Codex, the skill is:
+
+```text
+$proteus:continuous-vuln-research
+```
+
+The plugin name is `proteus`. The skill name is intentionally
+`continuous-vuln-research`, so the fully qualified Codex invocation describes
+both the plugin and the workflow. Renaming the skill itself to `proteus` would
+make the invocation look like `$proteus:proteus` and would leave less room for
+future Proteus skills.
+
+## Quick Start
+
+Initialize memory for a target:
 
 ```powershell
+proteus init --root C:\path\to\target --name target-name
+```
+
+Ingest prior work so Proteus can dedupe and avoid repeated coverage:
+
+```powershell
+proteus ingest --root C:\path\to\target findings REPORTS reports docs
+```
+
+Observe the repository and local environment:
+
+```powershell
+proteus observe --root C:\path\to\target
+```
+
+Plan a focused research round:
+
+```powershell
+proteus plan-round --root C:\path\to\target --objective "Find high-ROI auth, state, cache, and adapter divergence candidates" --write
+```
+
+Export human-readable state:
+
+```powershell
+proteus export --root C:\path\to\target
+```
+
+Proteus stores source-of-truth state under:
+
+```text
+<target>/.vros/memory.sqlite
+```
+
+Exports are written under:
+
+```text
+<target>/.vros/exports/
+```
+
+## Typical Flow
+
+```text
+you: use Proteus on this repository for continuous vulnerability research
+
+coordinator:
+  - loads or initializes .vros memory
+  - ingests existing findings, reports, docs, and prior research logs
+  - observes the repo, toolchain, package managers, tests, and runtime hints
+  - builds a round plan with high-ROI surfaces and skipped low-ROI areas
+  - assigns bounded fronts to Argus, Loom, Chaos, Libris, Mimic, Artificer, or Skeptic
+  - records hypotheses, evidence, decisions, killed paths, and revisit conditions
+  - promotes only candidates that survive the validation gates
+  - replans from what was learned instead of restarting from scratch
+```
+
+When Codex provides `/goal`, subagents, or parallel delegation, Proteus expects
+the coordinator to use those capabilities for efficiency:
+
+- `/goal` is useful for user-requested continuous campaigns or persistent
+  objectives with explicit stop conditions.
+- Subagents are useful for independent bounded fronts, not vague repo-wide
+  review.
+- The coordinator remains responsible for strategy, memory, validation gates,
+  duplicate checks, and final kill/promote decisions.
+
+## Specialist Fronts
+
+| Codename | Focus |
+| --- | --- |
+| Argus | Component-level review of local primitives and covered modules. |
+| Loom | Macro and chaining analysis across components and trust boundaries. |
+| Chaos | Fuzzing, edge-case generation, anomaly matrices, and probes. |
+| Libris | Docs, tests, advisories, public-known behavior, and contract verification. |
+| Mimic | Runtime, adapter, deployment-profile, and environment divergence. |
+| Artificer | Realistic PoC labs and didactic validation artifacts. |
+| Skeptic | Adversarial review, refutation, downgrade, and anti-slop pressure. |
+
+Artificer starts only after initial gates pass. Skeptic starts only after there
+is technical evidence worth challenging.
+
+## Validation Model
+
+A candidate is report-grade only when it satisfies the core gates:
+
+```text
+G1: root cause is in the target.
+G2: attacker input is realistic and external.
+G3: impact is concrete and security-relevant.
+G4: configuration is documented, default, or normal correct practice.
+G5: negative controls pass.
+G6: local findings/reports/logs do not already cover it.
+G7: public-known and expected-behavior checks are complete.
+G8: affected version and timeline are understood.
+G9: old/obvious classes have exceptional impact or are killed.
+G10: PoC does not depend on artificial lab help.
+```
+
+Immediate kill reasons include expected behavior, duplicates, weak crashes,
+weak DoS, integration-only issues, explicitly unsafe configuration only,
+lab-created behavior, and no realistic attacker boundary.
+
+## CLI Commands
+
+```text
+proteus init [--root <path>] [--name <target>]
+proteus status [--root <path>]
+proteus ingest [--root <path>] [paths...]
+proteus observe [--root <path>]
+proteus plan-round [--root <path>] [--objective <text>] [--write]
+proteus roles
+proteus prompt --role <argus|loom|chaos|libris|mimic|artificer|skeptic> --surface <text>
+proteus record hypothesis --title <text> [--surface-id <id>] [--impact <text>]
+proteus record evidence --title <text> [--kind <kind>] [--body <text>]
+proteus record decision --entity-type <type> --entity-id <id> --decision <text> --reason <text>
+proteus record agent-output --round-id <id> --role <codename> --surface <text>
+proteus update surface --id <id> [--status exhausted|low_roi|covered|blocked|watch] [--revisit <text>]
+proteus query duplicates <text>
+proteus query revisit <surface>
+proteus export [--root <path>]
+proteus lab create --candidate-id <id> [--name <name>]
+```
+
+## MCP Tools
+
+The plugin starts the MCP server through:
+
+```text
+plugins/proteus/.mcp.json
+```
+
+The server exposes:
+
+```text
+proteus_init
+proteus_status
+proteus_ingest
+proteus_observe
+proteus_plan_round
+proteus_query_duplicates
+proteus_record_hypothesis
+proteus_record_decision
+proteus_record_agent_output
+proteus_update_surface
+proteus_export
+proteus_lab_create
+```
+
+You can run it manually for local testing:
+
+```powershell
+proteus-mcp
+```
+
+## Architecture
+
+```text
+Codex skill
+  - operational contract for continuous vulnerability research
+  - defines coordinator loop, validation gates, role usage, and output verdicts
+
+CLI runtime
+  - initializes target memory
+  - observes repositories and local tooling
+  - plans rounds
+  - records hypotheses, evidence, decisions, surfaces, and agent outputs
+  - creates labs and exports Markdown
+
+MCP server
+  - exposes runtime operations to plugin-capable hosts
+
+.vros memory
+  - SQLite source of truth per target
+  - exported Markdown views for review and handoff
+```
+
+Project layout:
+
+```text
+docs/
+  ARCHITECTURE.md
+  DEVELOPMENT_PLAN.md
+  INSTALLATION.md
+  MEMORY_MODEL.md
+  REQUIREMENTS.md
+  RUNTIME_USAGE.md
+plugins/
+  proteus/
+    .codex-plugin/plugin.json
+    .mcp.json
+    dist/
+    scripts/proteus-mcp.cjs
+    skills/continuous-vuln-research/SKILL.md
+src/
+  cli.ts
+  mcp.ts
+  db.ts
+  planner.ts
+  roles.ts
+```
+
+## Dev Install
+
+```powershell
+git clone https://github.com/rafabd1/Proteus
+cd Proteus
 npm install
 npm run build
-node dist/cli.js init --name Proteus
-node dist/cli.js ingest README.md docs plugins/proteus/templates
-node dist/cli.js observe
-node dist/cli.js plan-round --objective "Initial high-ROI research round" --write
-node dist/cli.js export
+npm link
+proteus --version
 ```
 
-Target state is stored under `.vros/memory.sqlite`. Human-readable exports are
-generated under `.vros/exports/`.
-
-## MCP
-
-Proteus also exposes memory and planning tools through a local MCP server:
-
-```powershell
-npm run build
-node dist/mcp.js
-```
-
-The plugin configuration in [plugins/proteus/.mcp.json](plugins/proteus/.mcp.json)
-points to the built MCP server. Available MCP tools include initialization,
-status, ingest, observe, round planning, duplicate query, hypothesis/decision
-recording, agent-output recording, surface status updates, export, and lab
-creation.
-
-## Validation
+Run validation:
 
 ```powershell
 npm test
 ```
 
-The test script runs TypeScript checking, CLI smoke coverage, and MCP smoke
+The test suite runs TypeScript checking, CLI smoke coverage, and MCP smoke
 coverage against temporary targets.
+
+## Documentation
+
+- [Installation](docs/INSTALLATION.md)
+- [Runtime usage](docs/RUNTIME_USAGE.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Requirements](docs/REQUIREMENTS.md)
+- [Memory model](docs/MEMORY_MODEL.md)
+- [Development plan](docs/DEVELOPMENT_PLAN.md)
+
+## Status
+
+Proteus is early and intentionally conservative. The current release focuses on
+the Codex plugin contract, local memory runtime, CLI workflow, MCP exposure,
+round planning, agent-output recording, anti-revisit state, and lab scaffolding.
+
+The next major improvements are richer planner scoring, stricter output
+validation, better public-known/advisory checks, and deeper host integration for
+parallel research campaigns.
+
+## License
+
+GPL-3.0-or-later. See [LICENSE](LICENSE).
