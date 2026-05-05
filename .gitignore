@@ -25,6 +25,8 @@ node_modules/
 dist/
 !dist/
 !dist/**
+!plugins/proteus/dist/
+!plugins/proteus/dist/**
 build/
 coverage/
 .nyc_output/
