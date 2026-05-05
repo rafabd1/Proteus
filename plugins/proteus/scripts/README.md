@@ -8,6 +8,7 @@ Wrappers:
 ```text
 proteus.ps1
 proteus.sh
+proteus-mcp.cjs
 ```
 
 Helper groups:

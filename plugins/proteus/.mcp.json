@@ -3,7 +3,7 @@
     "proteus": {
       "command": "node",
       "args": [
-        "../../dist/mcp.js"
+        "./scripts/proteus-mcp.cjs"
       ]
     }
   }
