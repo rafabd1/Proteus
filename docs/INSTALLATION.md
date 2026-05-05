@@ -15,11 +15,12 @@ proteus --version
 Expected shape:
 
 ```text
-@rafabd1/proteus 0.1.2
+@rafabd1/proteus 0.1.3
 ```
 
-The GitHub install uses the committed `dist/` runtime, so it does not need to
-compile TypeScript on the installing machine.
+The GitHub install uses the committed `dist/` runtime and has no install-time
+build lifecycle, so it does not need to compile TypeScript on the installing
+machine.
 
 After publishing to npm, the registry install should be:
 

@@ -1,6 +1,6 @@
 {
   "name": "proteus",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "A Codex plugin for structured, continuous, exploitability-driven vulnerability research in arbitrary codebases.",
   "author": {
     "name": "rafabd1",
