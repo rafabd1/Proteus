@@ -17,6 +17,27 @@ npm run build
 Proteus requires Node.js 24 or newer because the first runtime uses
 `node:sqlite` for local structured memory.
 
+## Codex Orchestration
+
+Proteus is designed to benefit from Codex orchestration features when they are
+available in the session:
+
+- Use `/goal` for user-requested continuous campaigns, long-running plugin work,
+  or research objectives that should persist until explicit stop conditions are
+  met.
+- Use Codex subagents for independent, bounded Proteus fronts when delegation is
+  available and allowed. Assign one codename and one surface per subagent:
+  Argus, Loom, Chaos, Libris, Mimic, Artificer, or Skeptic.
+- Keep the coordinator in charge of ROI selection, memory updates, validation
+  gates, duplicate checks, kill/promote decisions, and replanning.
+- Fall back to serial local execution when `/goal`, subagents, MCP tools, or the
+  CLI are unavailable, while preserving the same memory schema and round plan.
+
+These features are efficiency tools, not evidence shortcuts. A report-grade
+candidate still needs realistic attacker control, documented/default
+configuration, negative controls, dedupe, and a PoC that does not depend on
+artificial lab help.
+
 ## Initialize A Target
 
 ```powershell

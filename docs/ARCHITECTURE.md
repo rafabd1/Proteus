@@ -319,14 +319,24 @@ vros lab create <candidate-id>
 
 The Codex skill should instruct the agent to:
 
+- use `/goal` for user-requested continuous campaigns or persistent objectives
+  when the capability is available;
+- use available subagents for parallel, independent Proteus fronts when the
+  session allows delegation;
 - initialize or load target memory;
 - inspect existing findings/reports before new work;
 - create a round plan before delegating;
-- use subagents only for bounded independent fronts;
+- map every subagent to one codename, one bounded surface, one heuristic family,
+  and explicit kill criteria;
 - update memory after decisions;
 - build labs only after candidate gates;
 - preserve discarded paths and playbook material;
 - stop on report-grade candidates, exhaustion, blockers, or user interruption.
+
+The coordinator remains the authority for strategy and evidence quality. Codex
+subagents may explore bounded fronts, but they do not promote findings directly.
+Goal mode may keep a campaign alive across long work, but stop conditions,
+replan triggers, and validation gates still come from Proteus memory.
 
 The plugin exposes memory commands as MCP tools through `dist/mcp.js`, while the
 CLI remains available for terminal-first workflows and smoke testing.

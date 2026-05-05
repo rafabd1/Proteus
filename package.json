@@ -1,6 +1,6 @@
 {
   "name": "@rafabd1/proteus",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Structured, continuous vulnerability research runtime and Codex plugin.",
   "type": "commonjs",
   "bin": {

@@ -227,7 +227,7 @@ function handleLine(line) {
             sendResult(request.id, {
                 protocolVersion: "2025-06-18",
                 capabilities: { tools: {} },
-                serverInfo: { name: "proteus", version: "0.1.5" }
+                serverInfo: { name: "proteus", version: "0.1.6" }
             });
             return;
         }
