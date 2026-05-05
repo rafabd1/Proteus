@@ -108,3 +108,21 @@ export interface DecisionInput {
   actor: string;
 }
 
+export type GlobalLearningCategory =
+  | "user_preference"
+  | "research_heuristic"
+  | "validation_pattern"
+  | "anti_pattern"
+  | "targeting_strategy"
+  | "tooling_note"
+  | "playbook_material";
+
+export interface GlobalLearningInput {
+  category: GlobalLearningCategory;
+  scope: string;
+  title: string;
+  body: string;
+  tags: string[];
+  sourceTarget?: string;
+  confidence: number;
+}

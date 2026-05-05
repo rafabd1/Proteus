@@ -7,10 +7,16 @@ import { fileURLToPath } from "node:url";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const cli = path.join(repoRoot, "dist", "cli.js");
 const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proteus-smoke-"));
+const globalRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proteus-global-smoke-"));
 
 function run(args, cwd = tmpRoot) {
   return execFileSync("node", [cli, ...args], {
     cwd,
+    env: {
+      ...process.env,
+      PROTEUS_GLOBAL_MEMORY_PATH: path.join(globalRoot, "global.sqlite"),
+      PROTEUS_GLOBAL_EXPORTS_DIR: path.join(globalRoot, "exports")
+    },
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"]
   });
@@ -30,6 +36,24 @@ try {
   run(["init", "--name", "smoke-target"]);
   run(["ingest", "docs"]);
   run(["observe"]);
+  run([
+    "learn",
+    "add",
+    "--category",
+    "user_preference",
+    "--scope",
+    "smoke,bug-bounty",
+    "--title",
+    "Prefer smoke exploitability",
+    "--body",
+    "Smoke global learning body",
+    "--tags",
+    "smoke,impact"
+  ]);
+  const learnings = run(["learn", "query", "exploitability", "--scope", "smoke"]);
+  if (!learnings.includes("Prefer smoke exploitability")) {
+    throw new Error("global learning query did not return expected record");
+  }
   run(["plan-round", "--objective", "Smoke high-ROI round", "--write"]);
   run([
     "record",
@@ -66,6 +90,7 @@ try {
   }
   run(["lab", "create", "--candidate-id", "1", "--name", "smoke-lab"]);
   run(["export"]);
+  run(["learn", "export"]);
 
   for (const required of [
     ".vros/memory.sqlite",
@@ -79,8 +104,15 @@ try {
       throw new Error(`missing expected artifact: ${required}`);
     }
   }
+  if (!fs.existsSync(path.join(globalRoot, "global.sqlite"))) {
+    throw new Error("missing global memory sqlite");
+  }
+  if (!fs.existsSync(path.join(globalRoot, "exports", "global-learnings.md"))) {
+    throw new Error("missing global learning export");
+  }
 
   console.log(`Proteus smoke test passed: ${tmpRoot}`);
 } finally {
   fs.rmSync(tmpRoot, { recursive: true, force: true });
+  fs.rmSync(globalRoot, { recursive: true, force: true });
 }

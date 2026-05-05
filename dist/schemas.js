@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.decisionInputSchema = exports.evidenceInputSchema = exports.hypothesisInputSchema = exports.surfaceInputSchema = exports.targetContractSchema = void 0;
+exports.globalLearningInputSchema = exports.decisionInputSchema = exports.evidenceInputSchema = exports.hypothesisInputSchema = exports.surfaceInputSchema = exports.targetContractSchema = void 0;
 exports.targetContractSchema = {
     parse(input) {
         const value = object(input, "target contract");
@@ -81,6 +81,28 @@ exports.decisionInputSchema = {
             reason: requiredString(value.reason, "reason"),
             evidenceIds: numberArray(value.evidenceIds),
             actor: optionalString(value.actor, "coordinator")
+        };
+    }
+};
+exports.globalLearningInputSchema = {
+    parse(input) {
+        const value = object(input, "global learning");
+        return {
+            category: enumValue(value.category, [
+                "user_preference",
+                "research_heuristic",
+                "validation_pattern",
+                "anti_pattern",
+                "targeting_strategy",
+                "tooling_note",
+                "playbook_material"
+            ], "research_heuristic"),
+            scope: optionalString(value.scope, "global"),
+            title: requiredString(value.title, "title"),
+            body: optionalString(value.body, ""),
+            tags: stringArray(value.tags),
+            sourceTarget: optionalMaybeString(value.sourceTarget),
+            confidence: clampNumber(value.confidence, 0, 1, 0.7)
         };
     }
 };

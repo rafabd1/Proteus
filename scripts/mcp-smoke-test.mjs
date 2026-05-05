@@ -7,9 +7,15 @@ import { spawn } from "node:child_process";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const serverPath = path.join(repoRoot, "plugins", "proteus", "scripts", "proteus-mcp.cjs");
 const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proteus-mcp-smoke-"));
+const globalRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proteus-mcp-global-smoke-"));
 
 const child = spawn("node", [serverPath], {
   cwd: repoRoot,
+  env: {
+    ...process.env,
+    PROTEUS_GLOBAL_MEMORY_PATH: path.join(globalRoot, "global.sqlite"),
+    PROTEUS_GLOBAL_EXPORTS_DIR: path.join(globalRoot, "exports")
+  },
   stdio: ["pipe", "pipe", "pipe"]
 });
 
@@ -82,6 +88,24 @@ try {
     arguments: { root: tmpRoot, objective: "MCP smoke plan", markdown: false }
   });
   await request("tools/call", {
+    name: "proteus_record_global_learning",
+    arguments: {
+      root: tmpRoot,
+      category: "validation_pattern",
+      scope: "mcp,smoke",
+      title: "MCP global learning",
+      body: "MCP smoke learning body",
+      tags: ["mcp", "smoke"]
+    }
+  });
+  const globalLearning = await request("tools/call", {
+    name: "proteus_query_global_learnings",
+    arguments: { text: "MCP", scope: "smoke" }
+  });
+  if (!String(globalLearning.content?.[0]?.text ?? "").includes("MCP global learning")) {
+    throw new Error("proteus_query_global_learnings did not return expected learning");
+  }
+  await request("tools/call", {
     name: "proteus_update_surface",
     arguments: { root: tmpRoot, id: 1, status: "covered", revisitCondition: "mcp smoke revisit" }
   });
@@ -90,5 +114,5 @@ try {
 } finally {
   child.kill();
   fs.rmSync(tmpRoot, { recursive: true, force: true });
+  fs.rmSync(globalRoot, { recursive: true, force: true });
 }
-

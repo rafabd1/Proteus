@@ -8,6 +8,7 @@ exports.planRound = planRound;
 exports.renderRoundPlan = renderRoundPlan;
 exports.surfaceFamilyForPath = surfaceFamilyForPath;
 const node_path_1 = __importDefault(require("node:path"));
+const global_memory_1 = require("./global-memory");
 const observe_1 = require("./observe");
 const roles_1 = require("./roles");
 const SURFACE_FAMILIES = [
@@ -139,9 +140,12 @@ function planRound(db, objective) {
         revisitCondition: surface.revisitCondition
     }));
     const agentFronts = buildAgentFronts(selected);
+    const globalLearnings = loadGlobalLearnings(db, objective);
     const plan = {
         objective,
-        currentUnderstanding: "Initial round plan derived from target profile, attack-surface families, prior memory state, and anti-revisit rules.",
+        currentUnderstanding: globalLearnings.length > 0
+            ? "Initial round plan derived from target profile, attack-surface families, prior memory state, global learnings, and anti-revisit rules."
+            : "Initial round plan derived from target profile, attack-surface families, prior memory state, and anti-revisit rules.",
         selectedSurfaces: selected,
         skippedSurfaces: skipped,
         agentFronts,
@@ -163,7 +167,8 @@ function planRound(db, objective) {
             "external blocker requires credentials or infrastructure",
             "all surviving hypotheses fail validation gates"
         ],
-        replanTrigger: "After every agent front returns, integrate killed paths and evidence, update ROI, and select the next highest marginal-value surfaces."
+        replanTrigger: "After every agent front returns, integrate killed paths and evidence, update ROI, and select the next highest marginal-value surfaces.",
+        globalLearnings
     };
     db.addRound({
         objective: plan.objective,
@@ -186,7 +191,28 @@ function renderRoundPlan(plan) {
     const fronts = plan.agentFronts
         .map((front) => `### ${front.displayName}\n\nFamily: ${front.family}\n\nAssigned surfaces: ${front.assignedSurfaceIds.join(", ")}\n\nPurpose: ${front.purpose}\n\nRequired output:\n${front.requiredOutput.map((item) => `- ${item}`).join("\n")}`)
         .join("\n\n");
-    return `# Proteus Round Plan\n\nObjective: ${plan.objective}\n\n## Current Understanding\n\n${plan.currentUnderstanding}\n\n## Selected Surfaces\n\n| ID | Surface | Family | ROI | Reason |\n| --- | --- | --- | ---: | --- |\n${selected || "| - | - | - | - | - |"}\n\n## Skipped Surfaces\n\n| ID | Surface | Family | ROI | Reason |\n| --- | --- | --- | ---: | --- |\n${skipped || "| - | - | - | - | - |"}\n\n## Agent Fronts\n\n${fronts}\n\n## Validation Gates\n\n${plan.validationGates.map((gate) => `- ${gate}`).join("\n")}\n\n## Stop Conditions\n\n${plan.stopConditions.map((condition) => `- ${condition}`).join("\n")}\n\n## Replan Trigger\n\n${plan.replanTrigger}\n`;
+    const learnings = plan.globalLearnings
+        .map((learning) => `| G${learning.id} | ${learning.category} | ${learning.title} | ${learning.scope} |`)
+        .join("\n");
+    return `# Proteus Round Plan\n\nObjective: ${plan.objective}\n\n## Current Understanding\n\n${plan.currentUnderstanding}\n\n## Global Learnings\n\n| ID | Category | Title | Scope |\n| --- | --- | --- | --- |\n${learnings || "| - | - | - | - |"}\n\n## Selected Surfaces\n\n| ID | Surface | Family | ROI | Reason |\n| --- | --- | --- | ---: | --- |\n${selected || "| - | - | - | - | - |"}\n\n## Skipped Surfaces\n\n| ID | Surface | Family | ROI | Reason |\n| --- | --- | --- | ---: | --- |\n${skipped || "| - | - | - | - | - |"}\n\n## Agent Fronts\n\n${fronts}\n\n## Validation Gates\n\n${plan.validationGates.map((gate) => `- ${gate}`).join("\n")}\n\n## Stop Conditions\n\n${plan.stopConditions.map((condition) => `- ${condition}`).join("\n")}\n\n## Replan Trigger\n\n${plan.replanTrigger}\n`;
+}
+function loadGlobalLearnings(db, objective) {
+    const target = db.getTarget();
+    const scope = target ? (0, global_memory_1.defaultGlobalScopeFromTarget)(target) : undefined;
+    const globalDb = new global_memory_1.GlobalMemoryDb();
+    try {
+        return globalDb
+            .queryLearnings({ text: [objective, scope].filter(Boolean).join(" "), limit: 5 })
+            .map((learning) => ({
+            id: learning.id,
+            category: learning.category,
+            title: learning.title,
+            scope: learning.scope
+        }));
+    }
+    finally {
+        globalDb.close();
+    }
 }
 function buildAgentFronts(selected) {
     const fronts = new Map();

@@ -1,6 +1,8 @@
 import type {
   DecisionInput,
   EvidenceInput,
+  GlobalLearningCategory,
+  GlobalLearningInput,
   HypothesisInput,
   RoiFactors,
   SurfaceInput,
@@ -101,6 +103,33 @@ export const decisionInputSchema: Parser<DecisionInput> = {
   }
 };
 
+export const globalLearningInputSchema: Parser<GlobalLearningInput> = {
+  parse(input: unknown): GlobalLearningInput {
+    const value = object(input, "global learning");
+    return {
+      category: enumValue(
+        value.category,
+        [
+          "user_preference",
+          "research_heuristic",
+          "validation_pattern",
+          "anti_pattern",
+          "targeting_strategy",
+          "tooling_note",
+          "playbook_material"
+        ] satisfies GlobalLearningCategory[],
+        "research_heuristic"
+      ),
+      scope: optionalString(value.scope, "global"),
+      title: requiredString(value.title, "title"),
+      body: optionalString(value.body, ""),
+      tags: stringArray(value.tags),
+      sourceTarget: optionalMaybeString(value.sourceTarget),
+      confidence: clampNumber(value.confidence, 0, 1, 0.7)
+    };
+  }
+};
+
 function parseRoi(input: unknown): RoiFactors {
   const value = object(input, "roi");
   return {
@@ -167,4 +196,3 @@ function numberArray(input: unknown): number[] {
 function enumValue<const T extends string>(input: unknown, allowed: readonly T[], fallback: T): T {
   return typeof input === "string" && (allowed as readonly string[]).includes(input) ? (input as T) : fallback;
 }
-

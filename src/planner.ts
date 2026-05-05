@@ -1,5 +1,6 @@
 import path from "node:path";
 import { ProteusDb } from "./db";
+import { defaultGlobalScopeFromTarget, GlobalMemoryDb } from "./global-memory";
 import { discoverFiles } from "./observe";
 import { ROLES } from "./roles";
 import type { AgentCodename, JsonValue, RoiFactors, SurfaceInput } from "./types";
@@ -98,6 +99,14 @@ export interface RoundPlan {
   validationGates: string[];
   stopConditions: string[];
   replanTrigger: string;
+  globalLearnings: PlannedGlobalLearning[];
+}
+
+export interface PlannedGlobalLearning {
+  id: number;
+  category: string;
+  title: string;
+  scope: string;
 }
 
 export interface PlannedSurface {
@@ -177,10 +186,13 @@ export function planRound(db: ProteusDb, objective: string): RoundPlan {
     }));
 
   const agentFronts = buildAgentFronts(selected);
+  const globalLearnings = loadGlobalLearnings(db, objective);
   const plan: RoundPlan = {
     objective,
     currentUnderstanding:
-      "Initial round plan derived from target profile, attack-surface families, prior memory state, and anti-revisit rules.",
+      globalLearnings.length > 0
+        ? "Initial round plan derived from target profile, attack-surface families, prior memory state, global learnings, and anti-revisit rules."
+        : "Initial round plan derived from target profile, attack-surface families, prior memory state, and anti-revisit rules.",
     selectedSurfaces: selected,
     skippedSurfaces: skipped,
     agentFronts,
@@ -203,7 +215,8 @@ export function planRound(db: ProteusDb, objective: string): RoundPlan {
       "all surviving hypotheses fail validation gates"
     ],
     replanTrigger:
-      "After every agent front returns, integrate killed paths and evidence, update ROI, and select the next highest marginal-value surfaces."
+      "After every agent front returns, integrate killed paths and evidence, update ROI, and select the next highest marginal-value surfaces.",
+    globalLearnings
   };
 
   db.addRound({
@@ -238,8 +251,29 @@ export function renderRoundPlan(plan: RoundPlan): string {
         `### ${front.displayName}\n\nFamily: ${front.family}\n\nAssigned surfaces: ${front.assignedSurfaceIds.join(", ")}\n\nPurpose: ${front.purpose}\n\nRequired output:\n${front.requiredOutput.map((item) => `- ${item}`).join("\n")}`
     )
     .join("\n\n");
+  const learnings = plan.globalLearnings
+    .map((learning) => `| G${learning.id} | ${learning.category} | ${learning.title} | ${learning.scope} |`)
+    .join("\n");
 
-  return `# Proteus Round Plan\n\nObjective: ${plan.objective}\n\n## Current Understanding\n\n${plan.currentUnderstanding}\n\n## Selected Surfaces\n\n| ID | Surface | Family | ROI | Reason |\n| --- | --- | --- | ---: | --- |\n${selected || "| - | - | - | - | - |"}\n\n## Skipped Surfaces\n\n| ID | Surface | Family | ROI | Reason |\n| --- | --- | --- | ---: | --- |\n${skipped || "| - | - | - | - | - |"}\n\n## Agent Fronts\n\n${fronts}\n\n## Validation Gates\n\n${plan.validationGates.map((gate) => `- ${gate}`).join("\n")}\n\n## Stop Conditions\n\n${plan.stopConditions.map((condition) => `- ${condition}`).join("\n")}\n\n## Replan Trigger\n\n${plan.replanTrigger}\n`;
+  return `# Proteus Round Plan\n\nObjective: ${plan.objective}\n\n## Current Understanding\n\n${plan.currentUnderstanding}\n\n## Global Learnings\n\n| ID | Category | Title | Scope |\n| --- | --- | --- | --- |\n${learnings || "| - | - | - | - |"}\n\n## Selected Surfaces\n\n| ID | Surface | Family | ROI | Reason |\n| --- | --- | --- | ---: | --- |\n${selected || "| - | - | - | - | - |"}\n\n## Skipped Surfaces\n\n| ID | Surface | Family | ROI | Reason |\n| --- | --- | --- | ---: | --- |\n${skipped || "| - | - | - | - | - |"}\n\n## Agent Fronts\n\n${fronts}\n\n## Validation Gates\n\n${plan.validationGates.map((gate) => `- ${gate}`).join("\n")}\n\n## Stop Conditions\n\n${plan.stopConditions.map((condition) => `- ${condition}`).join("\n")}\n\n## Replan Trigger\n\n${plan.replanTrigger}\n`;
+}
+
+function loadGlobalLearnings(db: ProteusDb, objective: string): PlannedGlobalLearning[] {
+  const target = db.getTarget();
+  const scope = target ? defaultGlobalScopeFromTarget(target) : undefined;
+  const globalDb = new GlobalMemoryDb();
+  try {
+    return globalDb
+      .queryLearnings({ text: [objective, scope].filter(Boolean).join(" "), limit: 5 })
+      .map((learning) => ({
+        id: learning.id,
+        category: learning.category,
+        title: learning.title,
+        scope: learning.scope
+      }));
+  } finally {
+    globalDb.close();
+  }
 }
 
 function buildAgentFronts(selected: PlannedSurface[]): AgentFront[] {

@@ -121,6 +121,35 @@ node dist/cli.js query duplicates "tenant state reused"
 node dist/cli.js query revisit "auth"
 ```
 
+## Record Global Learnings
+
+Target memory is local to `.vros/memory.sqlite`. Reusable cross-target memory is
+stored separately in:
+
+```text
+~/.vros/global.sqlite
+```
+
+Use it for user preferences, research heuristics, validation patterns,
+anti-patterns, targeting strategy, tooling notes, and playbook material that
+should survive across targets.
+
+```powershell
+node dist/cli.js learn add --category user_preference --scope "bug-bounty,oss" --title "Prefer realistic exploitability" --body "Prioritize concrete externally exploitable impact over weak best-practice issues." --tags "impact,anti-slop"
+```
+
+Recover it later:
+
+```powershell
+node dist/cli.js learn query "realistic exploitability" --scope "bug-bounty"
+node dist/cli.js learn query --target-scope --root C:\path\to\target
+node dist/cli.js learn export
+```
+
+When a round is planned, Proteus attempts to pull relevant global learnings into
+the round plan from the objective and target contract. These learnings guide
+strategy; they are not evidence for a target-specific vulnerability.
+
 ## Create A Lab
 
 ```powershell
@@ -169,6 +198,9 @@ proteus_record_agent_output
 proteus_update_surface
 proteus_export
 proteus_lab_create
+proteus_record_global_learning
+proteus_query_global_learnings
+proteus_export_global_learnings
 ```
 
 The plugin-level MCP configuration lives at:

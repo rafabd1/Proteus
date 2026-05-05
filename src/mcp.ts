@@ -2,6 +2,7 @@
 import process from "node:process";
 import { ProteusDb, createDefaultContract } from "./db";
 import { ingestPaths } from "./ingest";
+import { defaultGlobalScopeFromTarget, GlobalMemoryDb } from "./global-memory";
 import { observeTarget } from "./observe";
 import { planRound, renderRoundPlan } from "./planner";
 import { exportMarkdown } from "./exporter";
@@ -234,6 +235,76 @@ const tools: ToolDefinition[] = [
     description: "Create a realistic Artificer lab skeleton for a candidate.",
     inputSchema: schema({ root: stringProp(), candidateId: numberProp(), name: stringProp() }, ["root", "candidateId"]),
     handler: ({ root, candidateId, name }) => withDb(str(root), (db) => ({ path: createLab(db, num(candidateId, 0), maybeStr(name)) }))
+  },
+  {
+    name: "proteus_record_global_learning",
+    title: "Record Global Learning",
+    description: "Record reusable cross-target learning such as user preferences, validation patterns, tooling notes, and playbook material.",
+    inputSchema: schema(
+      {
+        root: stringProp("Optional target root used to infer scope and source target."),
+        category: stringProp("Learning category."),
+        scope: stringProp("Reusable scope tags or scope text."),
+        title: stringProp("Learning title."),
+        body: stringProp("Learning body."),
+        tags: arrayProp("Tags."),
+        sourceTarget: stringProp("Source target name."),
+        confidence: numberProp("Confidence from 0 to 1.")
+      },
+      ["title"]
+    ),
+    handler: (input) => {
+      const target = maybeStr(input.root) ? readTargetMaybe(str(input.root)) : null;
+      return withGlobalDb((globalDb) => ({
+        ok: true,
+        id: globalDb.addLearning({
+          category: (maybeStr(input.category) ?? "research_heuristic") as never,
+          scope: maybeStr(input.scope) ?? (target ? defaultGlobalScopeFromTarget(target) : "global"),
+          title: str(input.title),
+          body: maybeStr(input.body) ?? "",
+          tags: stringArray(input.tags),
+          sourceTarget: maybeStr(input.sourceTarget) ?? target?.name,
+          confidence: num(input.confidence, 0.7)
+        })
+      }));
+    }
+  },
+  {
+    name: "proteus_query_global_learnings",
+    title: "Query Global Learnings",
+    description: "Search reusable cross-target Proteus memory by text, scope, category, or tags.",
+    inputSchema: schema(
+      {
+        root: stringProp("Optional target root used to infer target scope."),
+        text: stringProp("Search text."),
+        scope: stringProp("Scope filter."),
+        category: stringProp("Category filter."),
+        tags: arrayProp("Required tags."),
+        targetScope: booleanProp("Infer scope from target root."),
+        limit: numberProp("Max rows.")
+      },
+      []
+    ),
+    handler: (input) => {
+      const target = maybeStr(input.root) ? readTargetMaybe(str(input.root)) : null;
+      const targetScope = input.targetScope === true && target ? defaultGlobalScopeFromTarget(target) : "";
+      return withGlobalDb((globalDb) =>
+        globalDb.queryLearnings({
+          text: [maybeStr(input.text) ?? "", targetScope].filter(Boolean).join(" "),
+          scope: maybeStr(input.scope),
+          category: maybeStr(input.category),
+          tags: stringArray(input.tags),
+          limit: num(input.limit, 20)
+        })
+      );
+    }
+  },
+  {
+    name: "proteus_export_global_learnings",
+    title: "Export Global Learnings",
+    description: "Export reusable global learnings to Markdown.",
+    inputSchema: schema({ outPath: stringProp("Optional output path.") }, []),
+    handler: ({ outPath }) => withGlobalDb((globalDb) => ({ path: globalDb.exportMarkdown(maybeStr(outPath)) }))
   }
 ];
 
@@ -266,7 +337,7 @@ function handleLine(line: string): void {
       sendResult(request.id, {
         protocolVersion: "2025-06-18",
         capabilities: { tools: {} },
-        serverInfo: { name: "proteus", version: "0.1.6" }
+        serverInfo: { name: "proteus", version: "0.1.7" }
       });
       return;
     }
@@ -314,6 +385,24 @@ function withDb(root: string, fn: (db: ProteusDb) => unknown): unknown {
   const db = new ProteusDb(resolveTargetRoot(root));
   try {
     return fn(db);
+  } finally {
+    db.close();
+  }
+}
+
+function withGlobalDb(fn: (db: GlobalMemoryDb) => unknown): unknown {
+  const db = new GlobalMemoryDb();
+  try {
+    return fn(db);
+  } finally {
+    db.close();
+  }
+}
+
+function readTargetMaybe(root: string): ReturnType<ProteusDb["getTarget"]> {
+  const db = new ProteusDb(resolveTargetRoot(root));
+  try {
+    return db.getTarget();
   } finally {
     db.close();
   }

@@ -156,6 +156,11 @@ Use the Proteus runtime when available. The memory database lives in the target
 workspace under `.vros/memory.sqlite`; Markdown files under `.vros/exports/`
 are exports, not the source of truth.
 
+Use global learnings for reusable cross-target memory, not target-specific
+evidence. Global learnings live under `~/.vros/global.sqlite` and may store user
+preferences, research heuristics, validation patterns, anti-patterns, targeting
+strategy, tooling notes, and playbook material.
+
 Preferred command flow:
 
 ```text
@@ -168,6 +173,8 @@ proteus record hypothesis --root <target-root> --title "<title>" --impact "<impa
 proteus record agent-output --root <target-root> --round-id <id> --role argus --surface "<surface>"
 proteus update surface --root <target-root> --id <id> --status exhausted --revisit "<condition>"
 proteus lab create --root <target-root> --candidate-id <id> --name <name>
+proteus learn query --root <target-root> --target-scope
+proteus learn add --category validation_pattern --scope "<scope>" --title "<title>" --body "<lesson>"
 proteus export --root <target-root>
 ```
 
@@ -193,6 +200,12 @@ Each meaningful decision must record:
 
 Discarded hypotheses are valuable. Record enough detail so future rounds do not
 repeat them.
+
+Global learnings must be scoped and conservative. Do not record a target finding
+as a global truth. Use global memory for reusable lessons such as "prefer WSL for
+Linux-first stacks", "reject SDK reports whose root cause is only an insecure
+integration", or "the user prefers realistic exploitability over weak
+best-practice claims".
 
 ## Agent Fronts
 

@@ -19,6 +19,9 @@ negative controls, and PoC validation without artificial lab help.
 - Continuous research loop: observe, map, hypothesize, prioritize, delegate,
   validate, kill or promote, then replan.
 - Structured memory in `.vros/memory.sqlite`, with Markdown exports for humans.
+- Global learnings in `~/.vros/global.sqlite` for reusable cross-target memory
+  such as user preferences, validation patterns, tooling notes, and playbook
+  material.
 - ROI-based surface planning to avoid wandering through the same low-signal
   areas.
 - Named specialist fronts for repeatable multi-agent research: Argus, Loom,
@@ -50,7 +53,7 @@ proteus --version
 Expected:
 
 ```text
-@rafabd1/proteus 0.1.6
+@rafabd1/proteus 0.1.7
 ```
 
 On npm versions where GitHub shorthand works reliably, this may also work:
@@ -205,6 +208,9 @@ proteus query duplicates <text>
 proteus query revisit <surface>
 proteus export [--root <path>]
 proteus lab create --candidate-id <id> [--name <name>]
+proteus learn add --title <text> [--category <category>] [--scope <scope>] [--body <text>] [--tags a,b]
+proteus learn query [text] [--scope <scope>] [--category <category>] [--target-scope]
+proteus learn export [--out <path>]
 ```
 
 ## MCP Tools
@@ -230,6 +236,9 @@ proteus_record_agent_output
 proteus_update_surface
 proteus_export
 proteus_lab_create
+proteus_record_global_learning
+proteus_query_global_learnings
+proteus_export_global_learnings
 ```
 
 You can run it manually for local testing:
@@ -258,6 +267,11 @@ MCP server
 .vros memory
   - SQLite source of truth per target
   - exported Markdown views for review and handoff
+
+global learnings
+  - reusable memory in ~/.vros/global.sqlite
+  - recovered by text, category, tags, or target scope
+  - guides strategy without becoming target-specific evidence
 ```
 
 Project layout:

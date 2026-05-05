@@ -10,6 +10,7 @@ const db_1 = require("./db");
 const exporter_1 = require("./exporter");
 const ingest_1 = require("./ingest");
 const lab_1 = require("./lab");
+const global_memory_1 = require("./global-memory");
 const observe_1 = require("./observe");
 const planner_1 = require("./planner");
 const prompts_1 = require("./prompts");
@@ -65,6 +66,9 @@ function main() {
                 break;
             case "lab":
                 cmdLab(db, subcommand, parsed);
+                break;
+            case "learn":
+                cmdLearn(db, subcommand, parsed);
                 break;
             default:
                 throw new Error(`Unknown command: ${command}`);
@@ -277,6 +281,57 @@ function cmdLab(db, subcommand, parsed) {
     const labPath = (0, lab_1.createLab)(db, candidateId, getString(parsed, "name"));
     console.log(`Created lab: ${labPath}`);
 }
+function cmdLearn(db, subcommand, parsed) {
+    const globalDb = new global_memory_1.GlobalMemoryDb();
+    try {
+        if (subcommand === "add") {
+            const target = db.getTarget();
+            const id = globalDb.addLearning({
+                category: (getString(parsed, "category") ?? "research_heuristic"),
+                scope: getString(parsed, "scope") ?? (target ? (0, global_memory_1.defaultGlobalScopeFromTarget)(target) : "global"),
+                title: requiredString(parsed, "title"),
+                body: getString(parsed, "body") ?? "",
+                tags: splitList(getString(parsed, "tags") ?? ""),
+                sourceTarget: getString(parsed, "source-target") ?? target?.name,
+                confidence: getNumber(parsed, "confidence") ?? 0.7
+            });
+            console.log(`Recorded global learning G${id}`);
+            console.log(`Memory: ${(0, global_memory_1.globalMemoryLocation)()}`);
+            return;
+        }
+        if (subcommand === "query") {
+            const target = db.getTarget();
+            const targetScope = getBoolean(parsed, "target-scope") && target ? (0, global_memory_1.defaultGlobalScopeFromTarget)(target) : "";
+            const text = [parsed.command.slice(2).join(" ") || getString(parsed, "text") || "", targetScope].filter(Boolean).join(" ");
+            const rows = globalDb.queryLearnings({
+                text,
+                scope: getString(parsed, "scope"),
+                category: getString(parsed, "category"),
+                tags: splitList(getString(parsed, "tags") ?? ""),
+                limit: getNumber(parsed, "limit") ?? 20
+            });
+            if (rows.length === 0) {
+                console.log("No global learnings found.");
+                return;
+            }
+            for (const row of rows) {
+                console.log(`G${row.id} [${row.category}] ${row.title}`);
+                console.log(`  scope=${row.scope}`);
+                console.log(`  tags=${row.tags.join(", ") || "-"}`);
+                console.log(`  ${row.body}`);
+            }
+            return;
+        }
+        if (subcommand === "export") {
+            console.log(`Wrote ${globalDb.exportMarkdown(getString(parsed, "out"))}`);
+            return;
+        }
+    }
+    finally {
+        globalDb.close();
+    }
+    throw new Error("learn requires one of: add, query, export");
+}
 function requireInitialized(db) {
     if (!db.getTarget()) {
         throw new Error("Target not initialized. Run `proteus init --name <target>` first.");
@@ -361,6 +416,9 @@ Usage:
   proteus query revisit <surface>
   proteus export [--root <path>]
   proteus lab create --candidate-id <id> [--name <name>]
+  proteus learn add --title <text> [--category <category>] [--scope <scope>] [--body <text>] [--tags a,b]
+  proteus learn query [text] [--scope <scope>] [--category <category>] [--target-scope]
+  proteus learn export [--out <path>]
 `);
 }
 try {

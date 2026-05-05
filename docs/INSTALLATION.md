@@ -15,7 +15,7 @@ proteus --version
 Expected shape:
 
 ```text
-@rafabd1/proteus 0.1.6
+@rafabd1/proteus 0.1.7
 ```
 
 The GitHub tarball install uses the committed `dist/` runtime and has no

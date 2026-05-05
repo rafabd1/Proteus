@@ -35,14 +35,16 @@ Benefits:
 - no daemon;
 - works on Windows, WSL, Linux, and CI.
 
-Optional future mode:
+Use a separate global SQLite database for cross-target learnings:
 
 ```text
 ~/.vros/global.sqlite
 ```
 
-The global database can store reusable playbook material across targets, but it
-must not mix target-specific claims without namespaces.
+The global database stores reusable playbook material, user preferences,
+validation patterns, targeting heuristics, and tooling notes across targets. It
+must not store target-specific vulnerability claims as if they were universal
+facts.
 
 ## 3. Entity Model
 
@@ -325,6 +327,54 @@ artificer
 skeptic
 ```
 
+### global_learnings
+
+Reusable memory that is not owned by one target. It is recovered by text,
+category, tags, or scope, and can be pulled into a target round plan when the
+objective and target contract match.
+
+```text
+id
+category
+scope
+title
+body
+tags_json
+source_target
+confidence
+created_at
+updated_at
+```
+
+`category` values:
+
+```text
+user_preference
+research_heuristic
+validation_pattern
+anti_pattern
+targeting_strategy
+tooling_note
+playbook_material
+```
+
+Examples:
+
+- "The user prefers realistic exploitability over weak best-practice issues."
+- "For SDK targets, reject integration-only findings unless root cause is in
+  the SDK/core."
+- "Do not reopen low-ROI redirect leads unless the allowlist contract changed."
+- "When WSL is available, prefer Linux-native test execution for web3 repos."
+
+Global learnings should include scope text such as:
+
+```text
+bug-bounty, oss, vercel, sdk, authz, cache-state, web3
+```
+
+This lets a target-specific round recover reusable knowledge without turning it
+into target evidence.
+
 ## 4. Full-Text Search
 
 Create FTS indexes for:
@@ -336,6 +386,7 @@ Create FTS indexes for:
 - candidate root causes;
 - evidence bodies;
 - file/symbol references.
+- global learning titles, bodies, scopes, categories, and tags.
 
 Important queries:
 
@@ -346,6 +397,8 @@ find prior reports touching this symbol
 find candidates involving this primitive
 find all evidence for this invariant
 find low-ROI surfaces in this family
+find global learnings for this target scope
+find user preferences for bug bounty validation
 ```
 
 ## 5. Anti-Revisit Logic
@@ -427,6 +480,9 @@ proteus_record_agent_output
 proteus_update_surface
 proteus_export
 proteus_lab_create
+proteus_record_global_learning
+proteus_query_global_learnings
+proteus_export_global_learnings
 ```
 
 The CLI and MCP server share the same SQLite memory layer.
