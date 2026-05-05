@@ -56,17 +56,9 @@ Expected:
 @rafabd1/proteus 0.1.7
 ```
 
-On npm versions where GitHub shorthand works reliably, this may also work:
-
-```powershell
-npm install -g github:rafabd1/Proteus
-```
-
-After publishing to npm, the intended registry install is:
-
-```powershell
-npm install -g @rafabd1/proteus
-```
+The codeload tarball is the recommended install path while Proteus is distributed
+directly from GitHub. It uses the committed runtime and avoids install-time
+TypeScript builds on the target machine.
 
 ### 2. Add The Codex Plugin
 
