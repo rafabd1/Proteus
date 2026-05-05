@@ -80,12 +80,6 @@ Invoke the skill with your host's plugin syntax. In Codex, the skill is:
 $proteus:continuous-vuln-research
 ```
 
-The plugin name is `proteus`. The skill name is intentionally
-`continuous-vuln-research`, so the fully qualified Codex invocation describes
-both the plugin and the workflow. Renaming the skill itself to `proteus` would
-make the invocation look like `$proteus:proteus` and would leave less room for
-future Proteus skills.
-
 ## Quick Start
 
 Initialize memory for a target:
