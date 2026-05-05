@@ -3,13 +3,13 @@
   "version": "0.1.0",
   "description": "A Codex plugin for structured, continuous, exploitability-driven vulnerability research in arbitrary codebases.",
   "author": {
-    "name": "[TODO: Author Name]",
-    "email": "[TODO: author@example.com]",
-    "url": "[TODO: https://github.com/author]"
+    "name": "rafabd1",
+    "email": "rbd.sye@gmail.com",
+    "url": "https://github.com/rafabd1"
   },
-  "homepage": "[TODO: https://docs.example.com/plugin]",
-  "repository": "[TODO: https://github.com/author/plugin]",
-  "license": "[TODO: choose license]",
+  "homepage": "https://github.com/rafabd1/Proteus",
+  "repository": "https://github.com/rafabd1/Proteus",
+  "license": "GPL-3.0-or-later",
   "keywords": [
     "security-research",
     "vulnerability-research",
@@ -18,35 +18,26 @@
     "codebase-analysis"
   ],
   "skills": "./skills/",
-  "hooks": "[TODO: ./hooks.json]",
   "mcpServers": "./.mcp.json",
-  "apps": "[TODO: ./.app.json]",
   "interface": {
     "displayName": "Proteus",
     "shortDescription": "Coordinate professional vulnerability research with memory, strategy, and realistic validation.",
     "longDescription": "Proteus coordinates structured vulnerability research for arbitrary codebases through named specialist agents: Argus, Loom, Chaos, Libris, Mimic, Artificer, and Skeptic. It emphasizes ROI-based surface selection, anti-revisit memory, realistic validation gates, PoC/lab discipline, and conservative exploitability decisions.",
-    "developerName": "[TODO: Developer Name]",
+    "developerName": "rafabd1",
     "category": "Developer Tools",
     "capabilities": [
       "Interactive",
       "Write",
       "Run"
     ],
-    "websiteURL": "[TODO: https://openai.com/]",
-    "privacyPolicyURL": "[TODO: https://openai.com/policies/row-privacy-policy/]",
-    "termsOfServiceURL": "[TODO: https://openai.com/policies/row-terms-of-use/]",
+    "websiteURL": "https://github.com/rafabd1/Proteus",
+    "privacyPolicyURL": "https://github.com/rafabd1/Proteus",
+    "termsOfServiceURL": "https://github.com/rafabd1/Proteus",
     "defaultPrompt": [
       "Initialize continuous vulnerability research for this codebase.",
       "Plan the next high-ROI offensive research round.",
       "Validate this candidate with realistic PoC and negative controls."
     ],
-    "brandColor": "#111827",
-    "composerIcon": "[TODO: ./assets/icon.png]",
-    "logo": "[TODO: ./assets/logo.png]",
-    "screenshots": [
-      "[TODO: ./assets/screenshot1.png]",
-      "[TODO: ./assets/screenshot2.png]",
-      "[TODO: ./assets/screenshot3.png]"
-    ]
+    "brandColor": "#111827"
   }
 }

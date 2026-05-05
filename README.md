@@ -56,7 +56,20 @@ Skeptic: adversarial review and finding refutation.
 
 ## Current Status
 
-This repository currently contains the product and architecture plan plus the
-initial plugin scaffold. Implementation is intentionally staged so the memory
-store, coordinator runtime, and lab tooling can be built with clear interfaces
-instead of becoming a prompt-only bundle.
+This repository contains the product plan, Codex plugin scaffold, and a working
+Node/TypeScript runtime backed by a local SQLite memory database.
+
+## CLI Quick Start
+
+```powershell
+npm install
+npm run build
+node dist/cli.js init --name Proteus
+node dist/cli.js ingest README.md docs plugins/proteus/templates
+node dist/cli.js observe
+node dist/cli.js plan-round --objective "Initial high-ROI research round" --write
+node dist/cli.js export
+```
+
+Target state is stored under `.vros/memory.sqlite`. Human-readable exports are
+generated under `.vros/exports/`.

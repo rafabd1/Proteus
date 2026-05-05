@@ -10,7 +10,8 @@
     "build": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
     "start": "node dist/cli.js",
-    "smoke": "npm run build && node dist/cli.js --help"
+    "smoke": "npm run build && node scripts/smoke-test.mjs",
+    "test": "npm run check && npm run smoke"
   },
   "keywords": [
     "security-research",
@@ -31,4 +32,3 @@
     "node": ">=24.0.0"
   }
 }
-

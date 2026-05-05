@@ -122,8 +122,26 @@ Immediate kill reasons:
 
 ## Structured Memory
 
-Use the memory tool when available. If it is not implemented yet, keep files in
-the target workspace under `.vros/exports/` using the same schema names:
+Use the Proteus runtime when available. The memory database lives in the target
+workspace under `.vros/memory.sqlite`; Markdown files under `.vros/exports/`
+are exports, not the source of truth.
+
+Preferred command flow:
+
+```text
+npm run build
+node dist/cli.js init --root <target-root> --name <target>
+node dist/cli.js ingest --root <target-root> findings REPORTS reports docs
+node dist/cli.js observe --root <target-root>
+node dist/cli.js plan-round --root <target-root> --objective "<objective>" --write
+node dist/cli.js query duplicates --root <target-root> "<candidate text>"
+node dist/cli.js record hypothesis --root <target-root> --title "<title>" --impact "<impact>"
+node dist/cli.js lab create --root <target-root> --candidate-id <id> --name <name>
+node dist/cli.js export --root <target-root>
+```
+
+If the runtime is unavailable, keep files in the target workspace under
+`.vros/exports/` using the same schema names:
 
 ```text
 surface-map.md
