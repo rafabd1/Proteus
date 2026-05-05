@@ -129,17 +129,16 @@ are exports, not the source of truth.
 Preferred command flow:
 
 ```text
-npm run build
-node dist/cli.js init --root <target-root> --name <target>
-node dist/cli.js ingest --root <target-root> findings REPORTS reports docs
-node dist/cli.js observe --root <target-root>
-node dist/cli.js plan-round --root <target-root> --objective "<objective>" --write
-node dist/cli.js query duplicates --root <target-root> "<candidate text>"
-node dist/cli.js record hypothesis --root <target-root> --title "<title>" --impact "<impact>"
-node dist/cli.js record agent-output --root <target-root> --round-id <id> --role argus --surface "<surface>"
-node dist/cli.js update surface --root <target-root> --id <id> --status exhausted --revisit "<condition>"
-node dist/cli.js lab create --root <target-root> --candidate-id <id> --name <name>
-node dist/cli.js export --root <target-root>
+proteus init --root <target-root> --name <target>
+proteus ingest --root <target-root> findings REPORTS reports docs
+proteus observe --root <target-root>
+proteus plan-round --root <target-root> --objective "<objective>" --write
+proteus query duplicates --root <target-root> "<candidate text>"
+proteus record hypothesis --root <target-root> --title "<title>" --impact "<impact>"
+proteus record agent-output --root <target-root> --round-id <id> --role argus --surface "<surface>"
+proteus update surface --root <target-root> --id <id> --status exhausted --revisit "<condition>"
+proteus lab create --root <target-root> --candidate-id <id> --name <name>
+proteus export --root <target-root>
 ```
 
 If the runtime is unavailable, keep files in the target workspace under

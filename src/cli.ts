@@ -20,6 +20,10 @@ interface ParsedArgs {
 function main(): void {
   const parsed = parseArgs(process.argv.slice(2));
   const [command, subcommand] = parsed.command;
+  if (parsed.flags.version === true || command === "-v" || command === "version") {
+    printVersion();
+    return;
+  }
   if (!command || command === "--help" || command === "-h" || command === "help") {
     printHelp();
     return;
@@ -71,6 +75,12 @@ function main(): void {
   } finally {
     db.close();
   }
+}
+
+function printVersion(): void {
+  const packagePath = path.resolve(__dirname, "..", "package.json");
+  const pkg = JSON.parse(fs.readFileSync(packagePath, "utf8")) as { name: string; version: string };
+  console.log(`${pkg.name} ${pkg.version}`);
 }
 
 function cmdInit(db: ProteusDb, parsed: ParsedArgs): void {

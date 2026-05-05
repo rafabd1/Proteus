@@ -39,6 +39,7 @@ pnpm-debug.log*
 *.tmp
 tmp/
 temp/
+.tmp/
 
 *.sqlite-wal
 *.sqlite-shm

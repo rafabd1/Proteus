@@ -1,0 +1,21 @@
+{
+  "name": "proteus-marketplace",
+  "interface": {
+    "displayName": "Proteus Marketplace"
+  },
+  "plugins": [
+    {
+      "name": "proteus",
+      "source": {
+        "source": "local",
+        "path": "./plugins/proteus"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}
+

@@ -3,6 +3,13 @@
 ## Install
 
 ```powershell
+npm install -g github:rafabd1/Proteus
+proteus --version
+```
+
+For local development:
+
+```powershell
 npm install
 npm run build
 ```

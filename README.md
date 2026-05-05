@@ -61,6 +61,27 @@ Node/TypeScript runtime backed by a local SQLite memory database.
 
 ## CLI Quick Start
 
+Install directly from GitHub:
+
+```powershell
+npm install -g github:rafabd1/Proteus
+proteus --version
+```
+
+After npm publishing, the shorter registry path is:
+
+```powershell
+npm install -g @rafabd1/proteus
+```
+
+Install the Codex plugin marketplace:
+
+```powershell
+codex plugin marketplace add rafabd1/Proteus
+```
+
+Development setup:
+
 ```powershell
 npm install
 npm run build
