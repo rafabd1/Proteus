@@ -11,11 +11,10 @@
         "path": "./plugins/proteus"
       },
       "policy": {
-        "installation": "AVAILABLE",
+        "installation": "INSTALLED_BY_DEFAULT",
         "authentication": "ON_INSTALL"
       },
       "category": "Developer Tools"
     }
   ]
 }
-
