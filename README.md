@@ -77,6 +77,41 @@ $proteus:continuous-vuln-research
 
 ## Quick Start
 
+### Codex Plugin
+
+After the marketplace is installed, use Proteus from Codex with the plugin/skill
+entrypoint exposed by your host.
+
+Common forms:
+
+```text
+/proteus
+$proteus
+$proteus:continuous-vuln-research
+```
+
+Example prompts:
+
+```text
+/proteus initialize continuous vulnerability research for this repository.
+
+/proteus plan the next high-ROI offensive research round for this codebase.
+
+/proteus use the existing findings and REPORTS folders, avoid duplicates, and focus on realistic exploitability.
+
+/proteus validate this candidate with realistic PoC gates, negative controls, and no forced vulnerable config.
+```
+
+When available, Proteus should use Codex `/goal` for persistent campaigns and
+subagents for bounded fronts such as Argus, Loom, Chaos, Libris, Mimic,
+Artificer, and Skeptic. The coordinator still owns strategy, memory, dedupe,
+validation gates, and final kill/promote decisions.
+
+### CLI Runtime
+
+Use the CLI when you want explicit terminal control or when your Codex host does
+not expose plugin tools directly.
+
 Initialize memory for a target:
 
 ```powershell
