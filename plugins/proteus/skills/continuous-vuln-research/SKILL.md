@@ -136,6 +136,8 @@ node dist/cli.js observe --root <target-root>
 node dist/cli.js plan-round --root <target-root> --objective "<objective>" --write
 node dist/cli.js query duplicates --root <target-root> "<candidate text>"
 node dist/cli.js record hypothesis --root <target-root> --title "<title>" --impact "<impact>"
+node dist/cli.js record agent-output --root <target-root> --round-id <id> --role argus --surface "<surface>"
+node dist/cli.js update surface --root <target-root> --id <id> --status exhausted --revisit "<condition>"
 node dist/cli.js lab create --root <target-root> --candidate-id <id> --name <name>
 node dist/cli.js export --root <target-root>
 ```

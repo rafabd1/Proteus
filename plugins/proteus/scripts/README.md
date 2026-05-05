@@ -1,8 +1,16 @@
 # Scripts
 
-This directory will hold the future local runtime helpers.
+This directory contains wrappers and runtime helper areas for the Proteus
+plugin.
 
-Planned command groups:
+Wrappers:
+
+```text
+proteus.ps1
+proteus.sh
+```
+
+Helper groups:
 
 ```text
 memory/
@@ -17,4 +25,3 @@ labs/
   validate configuration legitimacy
   capture negative controls
 ```
-

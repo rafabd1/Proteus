@@ -118,3 +118,52 @@ candidate-register.md
 research-log.md
 ```
 
+## MCP Server
+
+```powershell
+npm run build
+node dist/mcp.js
+```
+
+The MCP server exposes the same memory and planning operations for Codex/plugin
+use:
+
+```text
+proteus_init
+proteus_status
+proteus_ingest
+proteus_observe
+proteus_plan_round
+proteus_query_duplicates
+proteus_record_hypothesis
+proteus_record_decision
+proteus_record_agent_output
+proteus_update_surface
+proteus_export
+proteus_lab_create
+```
+
+The plugin-level MCP configuration lives at:
+
+```text
+plugins/proteus/.mcp.json
+```
+
+## Anti-Revisit Updates
+
+```powershell
+node dist/cli.js update surface --root C:\path\to\target --id 1 --status exhausted --revisit "Only reopen on new runtime mode or new chain dependency"
+```
+
+Use this after a round when Argus, Loom, Chaos, Libris, Mimic, Artificer, or
+Skeptic has exhausted or downgraded a surface. The planner uses these status
+fields to avoid repeated low-ROI work.
+
+## Agent Output Records
+
+```powershell
+node dist/cli.js record agent-output --root C:\path\to\target --round-id 1 --role argus --surface "Auth/session boundary" --covered "src/auth.ts,src/session.ts" --killed "expected refresh-token behavior"
+```
+
+Agent output records preserve covered surfaces, live candidates, killed
+hypotheses, probes, uncovered areas, and validation status.

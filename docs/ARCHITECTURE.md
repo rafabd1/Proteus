@@ -42,12 +42,13 @@ Responsibilities:
 - expose command examples;
 - keep the agent from treating the workflow as generic code review.
 
-Initial implementation:
+Implementation:
 
 - Codex plugin manifest;
 - `SKILL.md`;
 - Markdown templates;
-- scripts used by the future runtime.
+- PowerShell and POSIX wrappers under `plugins/proteus/scripts`;
+- MCP configuration under `plugins/proteus/.mcp.json`.
 
 ### Coordinator Runtime
 
@@ -175,8 +176,8 @@ Responsibilities:
 - record advisories, issues, PRs, discussions, changelog entries, and timeline;
 - block report-grade promotion until duplicate status is resolved.
 
-This layer can begin with local files and manual public-intel fields, then grow
-into adapters.
+This layer currently starts with local file ingestion plus full-text search in
+SQLite. Public-intel fields are recorded through evidence and decision records.
 
 ### Exporter
 
@@ -327,8 +328,8 @@ The Codex skill should instruct the agent to:
 - preserve discarded paths and playbook material;
 - stop on report-grade candidates, exhaustion, blockers, or user interruption.
 
-The plugin can later expose memory commands as MCP tools so the agent can query
-and write state without shelling out.
+The plugin exposes memory commands as MCP tools through `dist/mcp.js`, while the
+CLI remains available for terminal-first workflows and smoke testing.
 
 ## 9. Security and Reliability Notes
 

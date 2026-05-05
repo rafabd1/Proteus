@@ -410,22 +410,23 @@ report-draft-<candidate-id>.md
 Exports should include source IDs and evidence references so the human can audit
 the reasoning.
 
-## 8. MCP Tool Candidates
+## 8. MCP Tools
 
-Future MCP tools:
+Implemented MCP tools:
 
 ```text
-memory.init_target
-memory.ingest_source
-memory.record_surface
-memory.record_hypothesis
-memory.record_decision
-memory.record_evidence
-memory.query_duplicates
-memory.query_revisit_blockers
-memory.query_uncovered_surfaces
-memory.plan_round_context
-memory.export_markdown
+proteus_init
+proteus_status
+proteus_ingest
+proteus_observe
+proteus_plan_round
+proteus_query_duplicates
+proteus_record_hypothesis
+proteus_record_decision
+proteus_record_agent_output
+proteus_update_surface
+proteus_export
+proteus_lab_create
 ```
 
-The CLI can implement the same operations first. MCP can wrap it later.
+The CLI and MCP server share the same SQLite memory layer.

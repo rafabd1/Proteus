@@ -73,3 +73,27 @@ node dist/cli.js export
 
 Target state is stored under `.vros/memory.sqlite`. Human-readable exports are
 generated under `.vros/exports/`.
+
+## MCP
+
+Proteus also exposes memory and planning tools through a local MCP server:
+
+```powershell
+npm run build
+node dist/mcp.js
+```
+
+The plugin configuration in [plugins/proteus/.mcp.json](plugins/proteus/.mcp.json)
+points to the built MCP server. Available MCP tools include initialization,
+status, ingest, observe, round planning, duplicate query, hypothesis/decision
+recording, agent-output recording, surface status updates, export, and lab
+creation.
+
+## Validation
+
+```powershell
+npm test
+```
+
+The test script runs TypeScript checking, CLI smoke coverage, and MCP smoke
+coverage against temporary targets.

@@ -294,7 +294,7 @@ Keep the Codex plugin as the interaction layer:
 - skill;
 - templates;
 - scripts;
-- future MCP tools.
+- MCP tools.
 
 ## 4. Security Requirements
 
