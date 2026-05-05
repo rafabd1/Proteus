@@ -189,7 +189,9 @@ Responsibilities:
 - generate candidate registers;
 - generate discarded-hypothesis reports;
 - generate PoC README files;
-- generate report drafts only after gates pass.
+- generate report drafts only after gates pass;
+- keep report drafts triage-ready, concise, natural, and free of internal
+  Proteus/workspace/process references.
 
 Exports are views of memory, not the primary state.
 

@@ -98,7 +98,8 @@ try {
     ".vros/exports/surface-map.md",
     ".vros/exports/candidate-register.md",
     ".vros/exports/research-log.md",
-    ".vros/labs/C1-smoke-lab/README.md"
+    ".vros/labs/C1-smoke-lab/README.md",
+    ".vros/labs/C1-smoke-lab/report-draft.md"
   ]) {
     if (!fs.existsSync(path.join(tmpRoot, required))) {
       throw new Error(`missing expected artifact: ${required}`);

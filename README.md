@@ -33,6 +33,8 @@ negative controls, and PoC validation without artificial lab help.
   the terminal or through the Codex plugin.
 - Realistic PoC lab scaffolding with attacker model, documented/default config,
   negative controls, limitations, and evidence capture.
+- Triage-ready report draft guidance that favors natural language, concise root
+  cause explanation, realistic impact scenarios, and manual blackbox-style PoCs.
 
 ## Install
 
@@ -54,7 +56,7 @@ proteus --version
 Expected:
 
 ```text
-@rafabd1/proteus 0.1.8
+@rafabd1/proteus 0.1.9
 ```
 
 The codeload tarball is the recommended install path while Proteus is distributed
@@ -220,6 +222,20 @@ Immediate kill reasons include expected behavior, duplicates, weak crashes,
 weak DoS, integration-only issues, explicitly unsafe configuration only,
 lab-created behavior, incomplete public intel/timeline, unresolved Skeptic
 refutation, and no realistic attacker boundary.
+
+## Report Drafts
+
+Proteus report drafts are written for triagers, not for the internal research
+workflow. They should be concise, natural, and direct. They should explain the
+root cause in simple terms, present impact through a realistic attacker scenario,
+and avoid unnecessary sections or internal references to Proteus, `.vros`,
+subagents, workspace paths, or research process.
+
+PoCs should prefer manual reproduction when possible: browser actions, HTTP
+requests, `curl`, normal CLI commands, or other blackbox steps an attacker could
+realistically perform. If automation is necessary, the report should explain the
+manual flow being automated and include only short snippets that make the PoC
+easier to trust.
 
 ## CLI Commands
 

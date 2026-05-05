@@ -269,6 +269,60 @@ Not allowed:
 - treating debug-only behavior as production impact without scope support;
 - removing the real attacker boundary.
 
+## Report Draft Rules
+
+Write report drafts for triage, not for internal project documentation. The
+reader should understand the bug, impact, and reproduction path without knowing
+Proteus, the workspace, the agent roles, or the research process.
+
+Style:
+
+- use natural, direct language;
+- be concise, didactic, and specific;
+- explain the root cause in simple terms before going deep;
+- explain impact as a realistic attacker scenario, not as abstract severity;
+- avoid unnecessary sections, filler, and process narration;
+- avoid LLM-style phrasing such as "this is not about X, it is about Y";
+- avoid em dashes, ornate transitions, and generic hype;
+- do not mention Proteus, `.vros`, internal memory, subagents, local workspace
+  paths, or "Skeptic/Libris/Artificer" in the submitted report;
+- preserve uncertainty where evidence is incomplete.
+
+Required report substance:
+
+```text
+Title:
+Summary:
+Affected component/version:
+Root cause:
+Impact:
+Attack scenario:
+Steps to reproduce:
+Expected result:
+Actual result:
+Evidence:
+Why this is not expected/known:
+Suggested fix or mitigation:
+Limitations:
+```
+
+Only include sections that help triage. If a program has its own template, map
+the same substance into that template instead of forcing this exact structure.
+
+PoC presentation:
+
+- prefer manual, blackbox-style reproduction steps when possible;
+- use `curl`, browser actions, HTTP requests, CLI commands, or normal attacker
+  workflows before abstract automated harnesses;
+- if automation is necessary, also explain the underlying manual sequence;
+- present the PoC as a realistic high-impact scenario with attacker and victim
+  roles, tenants, projects, tokens, or resources;
+- make every step understandable to someone with zero prior context;
+- include short snippets only when they clarify how the PoC works;
+- explain what each snippet does and what output proves the issue;
+- keep negative controls visible so triage can distinguish the bug from lab
+  setup or misconfiguration.
+
 ## Output Verdicts
 
 Use consistent verdicts:

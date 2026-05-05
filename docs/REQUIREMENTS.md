@@ -193,8 +193,36 @@ Acceptance criteria:
 
 - labs cannot be marked valid without configuration legitimacy;
 - PoC README can be exported from structured lab state.
+- report draft guidance is generated with triage-ready writing constraints.
 
-### R10: Continuous Replanning
+### R10: Report Draft Quality
+
+Report drafts must be written for external triage, not internal workflow
+handoff.
+
+Requirements:
+
+- use natural, concise, didactic language;
+- avoid unnecessary formatting and sections;
+- avoid LLM-style phrasing, em dashes, filler, and generic hype;
+- do not mention Proteus, `.vros`, internal workspace paths, memory, or agent
+  roles in the submitted report;
+- explain root cause simply enough for a reader with no prior context;
+- explain impact through a realistic high-impact attacker scenario;
+- prefer manual blackbox reproduction steps using browser actions, HTTP
+  requests, `curl`, or normal CLI commands when possible;
+- if automation is used, explain the manual sequence it represents;
+- include short PoC snippets only when they clarify the reproduction;
+- explain what each snippet does and what output proves the issue.
+
+Acceptance criteria:
+
+- the report can be understood without project-internal context;
+- reproduction steps are didactic and independently reproducible;
+- impact, root cause, evidence, negative controls, intel/timeline, and
+  limitations are clear.
+
+### R11: Continuous Replanning
 
 The system must support recursive research:
 

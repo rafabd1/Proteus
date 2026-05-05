@@ -159,7 +159,9 @@ node dist/cli.js lab create --candidate-id 1 --name tenant-state-reuse
 
 Labs are created under `.vros/labs/` with a README that forces configuration
 legitimacy, attacker model, attack steps, negative controls, limitations, and
-evidence capture.
+evidence capture. They also include `report-draft.md`, a triage-oriented draft
+template that avoids internal Proteus/workspace language and favors concise
+root-cause, impact, and manual PoC explanation.
 
 ## Export Markdown
 

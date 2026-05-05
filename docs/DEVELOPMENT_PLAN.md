@@ -217,6 +217,12 @@ Starts only after a candidate passes initial gates. It builds a clean lab with:
 - expected output;
 - limitations.
 
+It also prepares a report draft oriented to external triage. The draft should
+use natural concise language, explain root cause and impact simply, avoid
+internal workflow references, and prefer manual blackbox reproduction steps such
+as `curl`, HTTP requests, browser actions, or normal CLI usage. Automated PoCs
+are acceptable only when the manual flow is explained clearly.
+
 ### Skeptic: Devil's Advocate
 
 Skeptic tries to refute the finding. It searches for expected behavior,
