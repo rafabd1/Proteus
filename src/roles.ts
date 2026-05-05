@@ -61,14 +61,16 @@ export const ROLES: Record<AgentCodename, RoleDefinition> = {
     displayName: "Libris",
     family: "docs-contract-verification",
     purpose:
-      "Verify official docs, tests, advisories, issues, and public-known behavior to establish the contract a candidate may break.",
+      "Verify official docs, tests, advisories, issues, releases, changelogs, public-known behavior, and timeline to establish the contract a candidate may break.",
     startsWhen: "A hypothesis needs contract evidence, dedupe, expected-behavior review, or timeline context.",
     requiredOutput: [
       "contract matrix",
       "docs/tests evidence",
       "classes killed as expected behavior",
       "duplicate or public-known risk",
-      "preliminary timeline"
+      "public intel search log with queries and sources",
+      "affected version and likely introduction window",
+      "known/not-known verdict with caveats"
     ]
   },
   mimic: {
@@ -105,12 +107,14 @@ export const ROLES: Record<AgentCodename, RoleDefinition> = {
     displayName: "Skeptic",
     family: "devils-advocate",
     purpose:
-      "Try to refute or downgrade a candidate through expected-behavior, duplicate, misuse, missing-control, and negative-control arguments.",
+      "Try to refute or downgrade a candidate through expected-behavior, duplicate, public-known, timeline, misuse, missing-control, impact, and negative-control arguments.",
     startsWhen: "Technical evidence exists and the coordinator needs adversarial validation before report-grade promotion.",
     requiredOutput: [
       "arguments against the finding",
       "outcome of each argument",
       "docs/intel found",
+      "unresolved doubts",
+      "required rebuttal evidence",
       "verdict: reportable, watchlist, or discarded"
     ]
   }
@@ -125,4 +129,3 @@ export const ROLE_ORDER: AgentCodename[] = [
   "artificer",
   "skeptic"
 ];
-

@@ -163,8 +163,9 @@ The system must block report-grade promotion unless all gates pass:
 - legitimate configuration;
 - negative controls;
 - local dedupe;
-- public-known/expected behavior check;
-- affected version/timeline;
+- public-known, advisory, issue, changelog, and expected-behavior checks;
+- affected version, likely introduction point, and timeline;
+- mandatory Skeptic refutation and recorded rebuttal;
 - old/obvious class threshold;
 - no artificial lab help.
 
@@ -173,6 +174,8 @@ Acceptance criteria:
 - each gate has explicit state: unknown, pass, fail, or not applicable;
 - fail states require reason and evidence;
 - unknown gates block report-grade status.
+- report-grade promotion is blocked unless public intel/timeline evidence and a
+  Skeptic verdict are recorded.
 
 ### R9: Lab and PoC Creation
 

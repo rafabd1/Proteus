@@ -156,10 +156,11 @@ function planRound(db, objective) {
             "G4 documented/default/correct-practice configuration",
             "G5 negative controls pass",
             "G6 local dedupe clear",
-            "G7 public-known and expected-behavior checks complete",
-            "G8 affected version and timeline understood",
-            "G9 old/obvious classes have exceptional impact or are killed",
-            "G10 PoC does not depend on artificial lab help"
+            "G7 public-known, advisory, issue, changelog, and expected-behavior checks complete and documented",
+            "G8 affected version, likely introduction point, and timeline understood",
+            "G9 Skeptic refutation completed and rebutted",
+            "G10 old/obvious classes have exceptional impact or are killed",
+            "G11 PoC does not depend on artificial lab help"
         ],
         stopConditions: [
             "report-grade candidate needs user decision",

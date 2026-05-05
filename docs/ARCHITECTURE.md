@@ -174,7 +174,9 @@ Responsibilities:
 - search prior logs;
 - track public-known risk;
 - record advisories, issues, PRs, discussions, changelog entries, and timeline;
-- block report-grade promotion until duplicate status is resolved.
+- identify affected versions and likely introduction or fix points;
+- block report-grade promotion until duplicate, public-known, expected-behavior,
+  and timeline status are resolved.
 
 This layer currently starts with local file ingestion plus full-text search in
 SQLite. Public-intel fields are recorded through evidence and decision records.
@@ -270,11 +272,18 @@ G3: concrete security impact.
 G4: documented/default/correct-practice configuration.
 G5: negative controls pass.
 G6: no duplicate in local findings/reports/logs.
-G7: public-known and expected-behavior checks complete.
-G8: affected version and timeline understood.
-G9: old/obvious class has exceptional impact or is killed.
-G10: PoC does not depend on artificial lab help.
+G7: public-known, advisory, issue, changelog, and expected-behavior checks complete and documented.
+G8: affected version, likely introduction point, and timeline understood.
+G9: Skeptic refutation completed and rebutted.
+G10: old/obvious class has exceptional impact or is killed.
+G11: PoC does not depend on artificial lab help.
 ```
+
+Pre-claim promotion requires recorded Libris and Skeptic outputs. Libris records
+the public intel/timeline search, including sources and queries. Skeptic records
+the strongest refutation arguments and whether each was rebutted, unresolved, or
+fatal. Any unresolved refutation or unavailable intel keeps the candidate below
+report-grade.
 
 Immediate kill reasons:
 

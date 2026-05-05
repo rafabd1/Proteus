@@ -27,7 +27,8 @@ negative controls, and PoC validation without artificial lab help.
 - Named specialist fronts for repeatable multi-agent research: Argus, Loom,
   Chaos, Libris, Mimic, Artificer, and Skeptic.
 - Validation gates that aggressively suppress weak hypotheses, duplicates,
-  expected behavior, forced-vulnerable configs, and lab-created bugs.
+  expected behavior, public-known issues, forced-vulnerable configs, and
+  lab-created bugs.
 - CLI and MCP interfaces, so the same memory and planning operations work from
   the terminal or through the Codex plugin.
 - Realistic PoC lab scaffolding with attacker model, documented/default config,
@@ -53,7 +54,7 @@ proteus --version
 Expected:
 
 ```text
-@rafabd1/proteus 0.1.7
+@rafabd1/proteus 0.1.8
 ```
 
 The codeload tarball is the recommended install path while Proteus is distributed
@@ -187,13 +188,15 @@ the coordinator to use those capabilities for efficiency:
 | Argus | Component-level review of local primitives and covered modules. |
 | Loom | Macro and chaining analysis across components and trust boundaries. |
 | Chaos | Fuzzing, edge-case generation, anomaly matrices, and probes. |
-| Libris | Docs, tests, advisories, public-known behavior, and contract verification. |
+| Libris | Docs, tests, advisories, public-known behavior, timeline, and contract verification. |
 | Mimic | Runtime, adapter, deployment-profile, and environment divergence. |
 | Artificer | Realistic PoC labs and didactic validation artifacts. |
 | Skeptic | Adversarial review, refutation, downgrade, and anti-slop pressure. |
 
 Artificer starts only after initial gates pass. Skeptic starts only after there
-is technical evidence worth challenging.
+is technical evidence worth challenging. No candidate should become report-grade
+until Libris has recorded public intel/timeline results and Skeptic has recorded
+an evidence-backed refutation attempt.
 
 ## Validation Model
 
@@ -206,15 +209,17 @@ G3: impact is concrete and security-relevant.
 G4: configuration is documented, default, or normal correct practice.
 G5: negative controls pass.
 G6: local findings/reports/logs do not already cover it.
-G7: public-known and expected-behavior checks are complete.
-G8: affected version and timeline are understood.
-G9: old/obvious classes have exceptional impact or are killed.
-G10: PoC does not depend on artificial lab help.
+G7: public-known, advisory, issue, changelog, and expected-behavior checks are complete and documented.
+G8: affected version, likely introduction point, and timeline are understood.
+G9: Skeptic has tried to refute or downgrade the finding and the rebuttal is recorded.
+G10: old/obvious classes have exceptional impact or are killed.
+G11: PoC does not depend on artificial lab help.
 ```
 
 Immediate kill reasons include expected behavior, duplicates, weak crashes,
 weak DoS, integration-only issues, explicitly unsafe configuration only,
-lab-created behavior, and no realistic attacker boundary.
+lab-created behavior, incomplete public intel/timeline, unresolved Skeptic
+refutation, and no realistic attacker boundary.
 
 ## CLI Commands
 

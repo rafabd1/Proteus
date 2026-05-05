@@ -188,12 +188,15 @@ hypothesis_id
 name
 root_cause
 affected_versions
+introduced_in
 attacker_model
 impact
 docs_contract
 validation_state
 dedupe_state
 public_intel_state
+timeline_state
+skeptic_review_state
 negative_controls_state
 reportability
 created_at

@@ -132,11 +132,35 @@ G3: impact is concrete and security-relevant.
 G4: configuration is documented, default, or normal correct practice.
 G5: negative controls pass.
 G6: local findings/reports/logs do not already cover it.
-G7: public-known and expected-behavior checks are complete.
-G8: affected version and timeline are understood.
-G9: old/obvious classes have exceptional impact or are killed.
-G10: PoC does not depend on artificial lab help.
+G7: public-known, advisory, issue, changelog, and expected-behavior checks are complete and documented.
+G8: affected version, likely introduction point, and timeline are understood.
+G9: Skeptic has tried to refute or downgrade the finding and the rebuttal is recorded.
+G10: old/obvious classes have exceptional impact or are killed.
+G11: PoC does not depend on artificial lab help.
 ```
+
+Before any vulnerability claim, run an explicit pre-claim review:
+
+```text
+Libris/intel:
+- search local findings, reports, changelogs, advisories, CVEs/GHSAs, issues,
+  PRs, releases, discussions, docs, tests, and public writeups;
+- identify affected versions and the likely introduction commit, PR, release,
+  or feature window;
+- record exact queries, sources, dates checked, and why the behavior is not
+  already known, documented, patched, or expected.
+
+Skeptic:
+- argue the strongest case that the candidate is expected, duplicate,
+  integration-only, misused, lab-created, low impact, or missing an attacker
+  boundary;
+- require evidence-backed rebuttals for each argument;
+- block report-grade promotion if any refutation remains unresolved.
+```
+
+Do not say "not known" or "novel" unless the intel/timeline search is recorded.
+If internet access or public intel tooling is unavailable, status must remain
+`Candidate` or `Watchlist`, not `Report-grade`.
 
 Immediate kill reasons:
 
@@ -147,6 +171,8 @@ Immediate kill reasons:
 - integration-only;
 - explicitly unsafe configuration only;
 - lab-created behavior;
+- unresolved Skeptic refutation;
+- incomplete public intel or timeline;
 - stale UI or metadata without authority;
 - old trivial bug with weak impact.
 
@@ -215,14 +241,15 @@ Use these fronts as reusable splits:
 - Loom: macro/chaining analysis. Connects components into emergent attack paths.
 - Chaos: fuzzing and edge-case generation. Produces anomaly matrices and probes.
 - Libris: docs/contract verification. Checks official docs, tests, issues,
-  advisories, and public-known behavior.
+  advisories, public-known behavior, and intro/fix timeline.
 - Mimic: runtime/adapter/environment divergence. Compares supported modes and
   deployment profiles.
 - Artificer: PoC builder. Creates realistic labs and didactic validation.
 - Skeptic: devil's advocate. Tries to refute, downgrade, or kill the finding.
 
 Artificer starts only after initial gates pass. Skeptic starts only after
-technical evidence exists.
+technical evidence exists. A candidate cannot become report-grade until Skeptic
+and Libris have both produced recorded outputs for the pre-claim review.
 
 ## Lab Rules
 
@@ -248,8 +275,8 @@ Use consistent verdicts:
 
 ```text
 Report-grade:
-Root cause, exploit path, impact, docs/contract, negative controls, and dedupe
-are strong.
+Root cause, exploit path, impact, docs/contract, negative controls, local dedupe,
+public intel/timeline, and Skeptic rebuttal are strong.
 
 Candidate:
 Primitive is real, but one or more gates need validation.

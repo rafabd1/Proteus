@@ -183,6 +183,9 @@ advisories, issues, and public research.
 
 Checks docs, tests, changelog, advisories, issues, and public research. It must
 try to prove the candidate is expected or already known before report writing.
+It also records the affected version, likely introduction point, public
+advisory/issue status, and the exact intel searches performed. Without this
+timeline and known-issue search, a candidate cannot become report-grade.
 
 ### Mimic: Runtime/Adapter/Environment Divergence
 
@@ -223,6 +226,8 @@ controls.
 Starts after technical evidence exists. It tries to kill the finding through
 docs, duplicate research, missing controls, misuse arguments, and stricter
 negative controls.
+Its verdict is a mandatory pre-claim gate. Unresolved Skeptic objections keep a
+candidate in Candidate or Watchlist status, even when the PoC appears to work.
 
 ## 6. Hypothesis Generation Heuristics
 

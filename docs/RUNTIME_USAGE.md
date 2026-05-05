@@ -36,7 +36,8 @@ available in the session:
 These features are efficiency tools, not evidence shortcuts. A report-grade
 candidate still needs realistic attacker control, documented/default
 configuration, negative controls, dedupe, and a PoC that does not depend on
-artificial lab help.
+artificial lab help. It also needs recorded public intel/timeline review and an
+evidence-backed Skeptic refutation pass.
 
 ## Initialize A Target
 
