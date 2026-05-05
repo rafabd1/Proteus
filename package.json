@@ -1,6 +1,6 @@
 {
   "name": "@rafabd1/proteus",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Structured, continuous vulnerability research runtime and Codex plugin.",
   "type": "commonjs",
   "bin": {
@@ -17,7 +17,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
-    "prepare": "npm run build",
+    "prepack": "npm run build",
     "start": "node dist/cli.js",
     "smoke": "npm run build && node scripts/smoke-test.mjs && node scripts/mcp-smoke-test.mjs",
     "test": "npm run check && npm run smoke"

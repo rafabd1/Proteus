@@ -8,7 +8,6 @@ const repoRoot = path.resolve(pluginDir, "..", "..");
 const server = path.join(repoRoot, "dist", "mcp.js");
 
 if (!fs.existsSync(server)) {
-  run("npm", ["install"], repoRoot);
   run("npm", ["run", "build"], repoRoot);
 }
 
@@ -20,4 +19,3 @@ function run(command, args, cwd) {
     process.exit(result.status ?? 1);
   }
 }
-

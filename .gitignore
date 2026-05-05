@@ -23,6 +23,8 @@ node_modules/
 .yarn/
 
 dist/
+!dist/
+!dist/**
 build/
 coverage/
 .nyc_output/
