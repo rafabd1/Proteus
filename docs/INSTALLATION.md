@@ -8,7 +8,7 @@ Proteus has two install surfaces:
 ## CLI Install From GitHub
 
 ```powershell
-npm install -g github:rafabd1/Proteus
+npm install -g https://github.com/rafabd1/Proteus/archive/refs/heads/main.tar.gz
 proteus --version
 ```
 
@@ -18,9 +18,16 @@ Expected shape:
 @rafabd1/proteus 0.1.4
 ```
 
-The GitHub install uses the committed `dist/` runtime and has no install-time
-build lifecycle, so it does not need to compile TypeScript on the installing
-machine.
+The GitHub tarball install uses the committed `dist/` runtime and has no
+install-time build lifecycle, so it does not need to compile TypeScript on the
+installing machine.
+
+On npm versions where GitHub shorthand works reliably, this equivalent form may
+also be used:
+
+```powershell
+npm install -g github:rafabd1/Proteus
+```
 
 After publishing to npm, the registry install should be:
 

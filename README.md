@@ -64,7 +64,7 @@ Node/TypeScript runtime backed by a local SQLite memory database.
 Install directly from GitHub:
 
 ```powershell
-npm install -g github:rafabd1/Proteus
+npm install -g https://github.com/rafabd1/Proteus/archive/refs/heads/main.tar.gz
 proteus --version
 ```
 

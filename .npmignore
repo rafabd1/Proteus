@@ -1,0 +1,17 @@
+node_modules/
+.vros/
+.tmp/
+.git/
+.github/
+*.log
+*.tmp
+coverage/
+.nyc_output/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.sqlite-wal
+*.sqlite-shm
+*.db-wal
+*.db-shm
+
