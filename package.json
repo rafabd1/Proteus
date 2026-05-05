@@ -1,19 +1,12 @@
 {
   "name": "@rafabd1/proteus",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Structured, continuous vulnerability research runtime and Codex plugin.",
   "type": "commonjs",
   "bin": {
     "proteus": "./dist/cli.js",
     "proteus-mcp": "./dist/mcp.js"
   },
-  "files": [
-    "dist",
-    "plugins",
-    "docs",
-    "README.md",
-    "LICENSE"
-  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",

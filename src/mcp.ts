@@ -266,7 +266,7 @@ function handleLine(line: string): void {
       sendResult(request.id, {
         protocolVersion: "2025-06-18",
         capabilities: { tools: {} },
-        serverInfo: { name: "proteus", version: "0.1.1" }
+        serverInfo: { name: "proteus", version: "0.1.4" }
       });
       return;
     }
@@ -367,4 +367,3 @@ function stringArray(value: unknown): string[] {
 function numberArray(value: unknown): number[] {
   return Array.isArray(value) ? value.filter((item): item is number => typeof item === "number" && Number.isFinite(item)) : [];
 }
-
