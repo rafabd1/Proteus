@@ -39,6 +39,15 @@ try {
     throw new Error("proteus_status did not return initialized target");
   }
 
+  await client.callTool({
+    name: "proteus_plan_round",
+    arguments: { root: tmpRoot, objective: "MCP smoke plan", markdown: false }
+  });
+  await client.callTool({
+    name: "proteus_update_surface",
+    arguments: { root: tmpRoot, id: 1, status: "covered", revisitCondition: "mcp smoke revisit" }
+  });
+
   console.log(`Proteus MCP smoke test passed: ${tmpRoot}`);
 } finally {
   await client.close();

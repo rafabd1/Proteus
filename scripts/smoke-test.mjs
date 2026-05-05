@@ -33,6 +33,21 @@ try {
   run(["plan-round", "--objective", "Smoke high-ROI round", "--write"]);
   run([
     "record",
+    "agent-output",
+    "--round-id",
+    "1",
+    "--role",
+    "argus",
+    "--surface",
+    "Smoke request surface",
+    "--covered",
+    "server.ts",
+    "--killed",
+    "smoke-only duplicate"
+  ]);
+  run(["update", "surface", "--id", "1", "--status", "covered", "--revisit", "smoke revisit condition"]);
+  run([
+    "record",
     "hypothesis",
     "--title",
     "Smoke validation candidate",

@@ -53,6 +53,9 @@ function main(): void {
       case "record":
         cmdRecord(db, subcommand, parsed);
         break;
+      case "update":
+        cmdUpdate(db, subcommand, parsed);
+        break;
       case "query":
         cmdQuery(db, subcommand, parsed);
         break;
@@ -198,7 +201,42 @@ function cmdRecord(db: ProteusDb, subcommand: string | undefined, parsed: Parsed
     return;
   }
 
-  throw new Error("record requires one of: hypothesis, evidence, decision");
+  if (subcommand === "agent-output") {
+    const role = requiredString(parsed, "role") as AgentCodename;
+    if (!(role in ROLES)) throw new Error(`Unknown role: ${role}`);
+    const id = db.addAgentOutput({
+      roundId: requiredNumber(parsed, "round-id"),
+      codename: role,
+      roleFamily: ROLES[role].family,
+      assignedSurface: requiredString(parsed, "surface"),
+      outputPath: getString(parsed, "output-path") ?? "",
+      coveredSurface: splitList(getString(parsed, "covered") ?? ""),
+      liveCandidates: splitList(getString(parsed, "candidates") ?? ""),
+      killedHypotheses: splitList(getString(parsed, "killed") ?? ""),
+      probes: splitList(getString(parsed, "probes") ?? ""),
+      uncoveredAreas: splitList(getString(parsed, "uncovered") ?? ""),
+      validationStatus: getString(parsed, "validation-status") ?? "unvalidated"
+    });
+    console.log(`Recorded agent output A${id}`);
+    return;
+  }
+
+  throw new Error("record requires one of: hypothesis, evidence, decision, agent-output");
+}
+
+function cmdUpdate(db: ProteusDb, subcommand: string | undefined, parsed: ParsedArgs): void {
+  requireInitialized(db);
+  if (subcommand === "surface") {
+    db.updateSurface({
+      id: requiredNumber(parsed, "id"),
+      status: getString(parsed, "status"),
+      revisitCondition: getString(parsed, "revisit"),
+      exhaustionLevel: getNumber(parsed, "exhaustion")
+    });
+    console.log(`Updated surface S${requiredNumber(parsed, "id")}`);
+    return;
+  }
+  throw new Error("update requires one of: surface");
 }
 
 function cmdQuery(db: ProteusDb, subcommand: string | undefined, parsed: ParsedArgs): void {
@@ -330,6 +368,8 @@ Usage:
   proteus record hypothesis --title <text> [--surface-id <id>] [--impact <text>]
   proteus record evidence --title <text> [--kind <kind>] [--body <text>]
   proteus record decision --entity-type <type> --entity-id <id> --decision <text> --reason <text>
+  proteus record agent-output --round-id <id> --role <codename> --surface <text>
+  proteus update surface --id <id> [--status exhausted|low_roi|covered|blocked|watch] [--revisit <text>]
   proteus query duplicates <text>
   proteus query revisit <surface>
   proteus export [--root <path>]
@@ -343,4 +383,3 @@ try {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 }
-

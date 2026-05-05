@@ -161,6 +161,31 @@ export class ProteusDb {
       .map(toSurfaceRow);
   }
 
+  updateSurface(input: {
+    id: number;
+    status?: string;
+    revisitCondition?: string;
+    exhaustionLevel?: number;
+  }): void {
+    const now = nowIso();
+    const current = this.getSurface(input.id);
+    if (!current) throw new Error(`Surface not found: ${input.id}`);
+    this.db
+      .prepare(
+        `UPDATE surfaces
+         SET status = ?, revisit_condition = ?, exhaustion_level = ?, last_reviewed_at = ?, updated_at = ?
+         WHERE id = ?`
+      )
+      .run(
+        input.status ?? current.status,
+        input.revisitCondition ?? current.revisitCondition,
+        input.exhaustionLevel ?? current.exhaustionLevel,
+        now,
+        now,
+        input.id
+      );
+  }
+
   getSurface(id: number): SurfaceRow | null {
     const row = this.db.prepare("SELECT * FROM surfaces WHERE id = ?").get(id) as Row | undefined;
     return row ? toSurfaceRow(row) : null;
@@ -299,6 +324,54 @@ export class ProteusDb {
 
   listRounds(): RoundRow[] {
     return this.db.prepare("SELECT * FROM rounds ORDER BY id DESC").all().map(toRoundRow);
+  }
+
+  addAgentOutput(output: {
+    roundId: number;
+    codename: string;
+    roleFamily: string;
+    assignedSurface: string;
+    outputPath: string;
+    coveredSurface: JsonValue;
+    liveCandidates: JsonValue;
+    killedHypotheses: JsonValue;
+    probes: JsonValue;
+    uncoveredAreas: JsonValue;
+    validationStatus: string;
+  }): number {
+    const target = requireTarget(this);
+    const now = nowIso();
+    const result = this.db
+      .prepare(
+        `INSERT INTO agent_outputs
+          (target_id, round_id, agent_codename, agent_role_family, assigned_surface,
+           output_path, covered_surface_json, live_candidates_json,
+           killed_hypotheses_json, probes_json, uncovered_areas_json,
+           validation_status, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        target.id,
+        output.roundId,
+        output.codename,
+        output.roleFamily,
+        output.assignedSurface,
+        output.outputPath,
+        json(output.coveredSurface),
+        json(output.liveCandidates),
+        json(output.killedHypotheses),
+        json(output.probes),
+        json(output.uncoveredAreas),
+        output.validationStatus,
+        now
+      );
+    const id = Number(result.lastInsertRowid);
+    this.indexFts(
+      "agent_output",
+      id,
+      `${output.codename}\n${output.roleFamily}\n${output.assignedSurface}\n${output.validationStatus}\n${output.outputPath}`
+    );
+    return id;
   }
 
   addLab(candidateId: number, labPath: string, configLegitimacy: string): number {
@@ -457,6 +530,23 @@ export class ProteusDb {
         limitations TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS agent_outputs (
+        id INTEGER PRIMARY KEY,
+        target_id INTEGER NOT NULL REFERENCES targets(id) ON DELETE CASCADE,
+        round_id INTEGER NOT NULL REFERENCES rounds(id) ON DELETE CASCADE,
+        agent_codename TEXT NOT NULL,
+        agent_role_family TEXT NOT NULL,
+        assigned_surface TEXT NOT NULL,
+        output_path TEXT NOT NULL,
+        covered_surface_json TEXT NOT NULL,
+        live_candidates_json TEXT NOT NULL,
+        killed_hypotheses_json TEXT NOT NULL,
+        probes_json TEXT NOT NULL,
+        uncovered_areas_json TEXT NOT NULL,
+        validation_status TEXT NOT NULL,
+        created_at TEXT NOT NULL
       );
 
       CREATE VIRTUAL TABLE IF NOT EXISTS proteus_fts USING fts5(

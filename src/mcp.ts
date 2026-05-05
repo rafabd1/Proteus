@@ -179,6 +179,53 @@ server.registerTool(
 );
 
 server.registerTool(
+  "proteus_record_agent_output",
+  {
+    title: "Record Agent Output",
+    description: "Record structured output from Argus, Loom, Chaos, Libris, Mimic, Artificer, or Skeptic.",
+    inputSchema: {
+      root: z.string(),
+      roundId: z.number().int().positive(),
+      codename: z.enum(["argus", "loom", "chaos", "libris", "mimic", "artificer", "skeptic"]),
+      roleFamily: z.string(),
+      assignedSurface: z.string(),
+      outputPath: z.string().default(""),
+      coveredSurface: z.array(z.string()).default([]),
+      liveCandidates: z.array(z.string()).default([]),
+      killedHypotheses: z.array(z.string()).default([]),
+      probes: z.array(z.string()).default([]),
+      uncoveredAreas: z.array(z.string()).default([]),
+      validationStatus: z.string().default("unvalidated")
+    }
+  },
+  async (input) =>
+    withDb(input.root, (db) => {
+      const id = db.addAgentOutput(input);
+      return textJson({ ok: true, id });
+    })
+);
+
+server.registerTool(
+  "proteus_update_surface",
+  {
+    title: "Update Surface Status",
+    description: "Update a surface status, exhaustion level, and revisit condition for anti-revisit planning.",
+    inputSchema: {
+      root: z.string(),
+      id: z.number().int().positive(),
+      status: z.enum(["unmapped", "active", "covered", "exhausted", "low_roi", "blocked", "watch"]).optional(),
+      revisitCondition: z.string().optional(),
+      exhaustionLevel: z.number().int().min(0).max(10).optional()
+    }
+  },
+  async (input) =>
+    withDb(input.root, (db) => {
+      db.updateSurface(input);
+      return textJson({ ok: true, id: input.id });
+    })
+);
+
+server.registerTool(
   "proteus_export",
   {
     title: "Export Markdown",
