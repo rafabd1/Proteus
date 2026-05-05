@@ -4,13 +4,14 @@
   "description": "Structured, continuous vulnerability research runtime and Codex plugin.",
   "type": "commonjs",
   "bin": {
-    "proteus": "./dist/cli.js"
+    "proteus": "./dist/cli.js",
+    "proteus-mcp": "./dist/mcp.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
     "start": "node dist/cli.js",
-    "smoke": "npm run build && node scripts/smoke-test.mjs",
+    "smoke": "npm run build && node scripts/smoke-test.mjs && node scripts/mcp-smoke-test.mjs",
     "test": "npm run check && npm run smoke"
   },
   "keywords": [
@@ -22,6 +23,7 @@
   ],
   "license": "GPL-3.0-or-later",
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {

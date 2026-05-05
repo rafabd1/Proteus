@@ -1,3 +1,10 @@
 {
-  "mcpServers": {}
+  "mcpServers": {
+    "proteus": {
+      "command": "node",
+      "args": [
+        "../../dist/mcp.js"
+      ]
+    }
+  }
 }
