@@ -4,7 +4,7 @@ Proteus has three install surfaces:
 
 - CLI/runtime: the `proteus` and `proteus-mcp` commands.
 - Codex plugin: installed through a Codex plugin marketplace.
-- Claude Code plugin: `/proteus:proteus`, plugin subagents, and MCP config.
+- Claude Code plugin: `/proteus`, plugin subagents, and MCP config.
 
 ## CLI Install From GitHub
 
@@ -94,7 +94,7 @@ Install directly inside Claude Code:
 /plugin install proteus@proteus-marketplace
 ```
 
-Then use `/proteus:proteus` from Claude Code.
+Then use `/proteus` from Claude Code.
 
 ## Verify Runtime
 

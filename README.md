@@ -42,7 +42,7 @@ Proteus has three install surfaces:
 
 - CLI/runtime: `proteus` and `proteus-mcp`
 - Codex plugin: the `continuous-vuln-research` skill plus MCP configuration
-- Claude Code plugin: `/proteus:proteus`, plugin subagents, and plugin MCP configuration
+- Claude Code plugin: `/proteus`, plugin subagents, and plugin MCP configuration
 
 ### 1. Install The CLI
 
@@ -73,15 +73,7 @@ codex plugin marketplace add rafabd1/Proteus
 Then install or enable the `proteus` plugin from Codex's plugin UI if your host
 does not install marketplace defaults automatically.
 
-Invoke the skill with your host's plugin syntax. In Codex, the skill is:
-
-```text
-$proteus:continuous-vuln-research
-```
-
-## Quick Start
-
-### Claude Code
+### 3. Add The Claude Code Plugin
 
 Install directly inside Claude Code:
 
@@ -90,30 +82,22 @@ Install directly inside Claude Code:
 /plugin install proteus@proteus-marketplace
 ```
 
-Then use:
+## Quick Start
 
-```text
-/proteus:proteus initialize continuous vulnerability research for this repository
-/proteus:proteus plan the next high-ROI offensive research round
-/proteus:proteus validate this candidate with realistic PoC gates and negative controls
-/proteus:proteus draft a triage-ready report without internal workflow references
-```
-
-### Codex Plugin
-
-After the marketplace is installed, use Proteus from Codex with the plugin/skill
-entrypoint exposed by your host.
+After installing the plugin in Codex or Claude Code, use Proteus with `/proteus`.
 
 Example prompts:
 
 ```text
-/proteus initialize continuous vulnerability research for this repository.
+/proteus initialize continuous vulnerability research for this repository
 
-/proteus plan the next high-ROI offensive research round for this codebase.
+/proteus plan the next high-ROI offensive research round for this codebase
 
-/proteus use the existing findings and REPORTS folders, avoid duplicates, and focus on realistic exploitability.
+/proteus use the existing findings and REPORTS folders, avoid duplicates, and focus on realistic exploitability
 
-/proteus validate this candidate with realistic PoC gates, negative controls, and no forced vulnerable config.
+/proteus validate this candidate with realistic PoC gates, negative controls, and no forced vulnerable config
+
+/proteus draft a triage-ready report without internal workflow references
 ```
 
 When available, Proteus should use persistent goal/campaign features for
