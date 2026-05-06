@@ -5,12 +5,12 @@
     "email": "rbd.sye@gmail.com"
   },
   "version": "0.1.16",
-  "description": "Proteus plugins for structured, exploitability-driven vulnerability research.",
+  "description": "Proteus plugins for Claude Code and Codex focused on structured, exploitability-driven vulnerability research.",
   "plugins": [
     {
       "name": "proteus",
       "source": "./plugins/proteus",
-      "description": "Structured, continuous vulnerability research with memory, strategy, and realistic validation.",
+      "description": "A plugin for Claude Code and Codex that coordinates structured, continuous vulnerability research with memory, strategy, and realistic validation.",
       "version": "0.1.16",
       "author": {
         "name": "rafabd1",

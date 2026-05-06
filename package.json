@@ -1,7 +1,7 @@
 {
   "name": "@rafabd1/proteus",
   "version": "0.1.16",
-  "description": "Structured, continuous vulnerability research runtime and assistant integration suite.",
+  "description": "A plugin for Claude Code and Codex that coordinates structured, continuous vulnerability research against arbitrary codebases.",
   "type": "commonjs",
   "bin": {
     "proteus": "./dist/cli.js",

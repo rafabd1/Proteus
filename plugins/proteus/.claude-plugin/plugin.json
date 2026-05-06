@@ -1,7 +1,7 @@
 {
   "name": "proteus",
   "version": "0.1.16",
-  "description": "Structured, continuous vulnerability research with memory, strategy, and realistic validation.",
+  "description": "A plugin for Claude Code and Codex that coordinates structured, continuous vulnerability research with memory, strategy, and realistic validation.",
   "author": {
     "name": "rafabd1",
     "email": "rbd.sye@gmail.com"

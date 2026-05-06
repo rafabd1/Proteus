@@ -1,7 +1,7 @@
 # Proteus
 
-Proteus is a local runtime and assistant integration suite for structured,
-continuous vulnerability research against arbitrary codebases.
+Proteus is a plugin for Claude Code and Codex, plus a local runtime, for
+structured, continuous vulnerability research against arbitrary codebases.
 
 You give it a target repository. Proteus helps the coordinator map the codebase,
 select high-ROI security surfaces, generate non-obvious exploitability
