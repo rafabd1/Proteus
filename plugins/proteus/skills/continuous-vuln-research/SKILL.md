@@ -252,24 +252,42 @@ technical evidence exists. A candidate cannot become report-grade until Skeptic
 and Libris have both produced recorded outputs for the pre-claim review.
 
 When the host supports subagents or parallel delegated work, use the packaged
-role contracts as the source of truth for delegated fronts. These are
-plugin-relative paths from this `SKILL.md`, not paths in the target workspace:
+role contracts as the source of truth for delegated fronts. These contracts must
+be resolved from the Proteus plugin/package location, never from the target
+workspace.
+
+Role contract filenames:
 
 ```text
-../../agents/proteus-argus.md
-../../agents/proteus-loom.md
-../../agents/proteus-chaos.md
-../../agents/proteus-libris.md
-../../agents/proteus-mimic.md
-../../agents/proteus-artificer.md
-../../agents/proteus-skeptic.md
+proteus-argus.md
+proteus-loom.md
+proteus-chaos.md
+proteus-libris.md
+proteus-mimic.md
+proteus-artificer.md
+proteus-skeptic.md
 ```
 
-For Codex, the coordinator should resolve the relevant contract from the skill's
-own plugin directory, read it locally, and inline the role requirements into the
-spawned subagent prompt together with the target-specific surface, files,
-objective, evidence, and kill criteria. Do not ask the spawned subagent to open
-these paths from the target workspace.
+Resolve contracts in this order:
+
+```text
+1. From this skill file:
+   <SKILL.md directory>/../../agents/<contract>.md
+
+2. From the current development checkout:
+   C:\Users\rafae\Desktop\Projetos\Proteus\plugins\proteus\agents\<contract>.md
+
+3. From an installed Codex plugin cache:
+   %USERPROFILE%\.codex\plugins\cache\proteus-marketplace\proteus\*\agents\<contract>.md
+
+4. From an installed Claude Code plugin cache, if present:
+   %USERPROFILE%\.claude\plugins\cache\**\proteus*\agents\<contract>.md
+```
+
+For Codex, the coordinator should read the relevant contract itself and inline
+the role requirements into the spawned subagent prompt together with the
+target-specific surface, files, objective, evidence, and kill criteria. Do not
+ask the spawned subagent to open these paths from the target workspace.
 
 For Claude Code, these same files are plugin subagents and should appear in
 `/agents` after installation. Even there, the coordinator should still provide

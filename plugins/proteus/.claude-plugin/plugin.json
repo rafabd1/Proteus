@@ -1,6 +1,6 @@
 {
   "name": "proteus",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "description": "Structured, continuous vulnerability research with memory, strategy, and realistic validation.",
   "author": {
     "name": "rafabd1",
