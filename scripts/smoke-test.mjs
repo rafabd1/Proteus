@@ -155,6 +155,12 @@ try {
   if (!fs.existsSync(path.join(globalRoot, "exports", "global-learnings.md"))) {
     throw new Error("missing global learning export");
   }
+  const reportDraft = fs.readFileSync(path.join(tmpRoot, ".vros/labs/C1-smoke-lab/report-draft.md"), "utf8");
+  for (const section of ["## Title", "## CWE", "## Summary", "## Steps To Reproduce", "## Impact"]) {
+    if (!reportDraft.includes(section)) {
+      throw new Error(`report draft missing expected section: ${section}`);
+    }
+  }
 
   console.log(`Proteus smoke test passed: ${tmpRoot}`);
 } finally {

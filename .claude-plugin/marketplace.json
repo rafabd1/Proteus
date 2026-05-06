@@ -4,14 +4,14 @@
     "name": "rafabd1",
     "email": "rbd.sye@gmail.com"
   },
-  "version": "0.1.11",
+  "version": "0.1.12",
   "description": "Proteus plugins for structured, exploitability-driven vulnerability research.",
   "plugins": [
     {
       "name": "proteus",
       "source": "./plugins/proteus",
       "description": "Structured, continuous vulnerability research with memory, strategy, and realistic validation.",
-      "version": "0.1.11",
+      "version": "0.1.12",
       "author": {
         "name": "rafabd1",
         "email": "rbd.sye@gmail.com"

@@ -1,82 +1,52 @@
 # Report Draft Template
 
-Write this for the triager, not for Proteus. Do not mention internal workspace
+Write this for the triager, not for internal notes. Do not mention internal workspace
 paths, agent roles, memory files, or research workflow. Use natural, concise
 language. Avoid em dashes, filler, and phrases such as "this is not about X, it
 is about Y".
 
 ## Title
 
-Use a concrete title that names the affected boundary and impact.
+Use one concrete sentence that names the affected boundary and impact.
+
+## CWE
+
+Use the most accurate CWE. If uncertain, write the best candidate and keep the
+uncertainty explicit.
 
 ## Summary
 
-Explain the issue in plain language. A reader with no prior context should
-understand what breaks, who can trigger it, and why it matters.
-
-## Affected Component And Version
-
-- Component:
-- Tested version/commit:
-- Likely introduced in:
-- Fixed version or patch status, if known:
+Start directly. In one or two short paragraphs, explain what breaks, who can
+trigger it, the root cause at a high level, and the realistic security impact.
+A reader with no prior context should understand the issue from this section.
 
 ## Root Cause
 
-Explain the bug simply first, then add the relevant technical detail. Focus on
-the target-owned mistake, not the lab.
-
-## Impact
-
-Describe a realistic high-impact attacker scenario. Name attacker capabilities,
-victim resources, and the security consequence.
-
-## Attack Scenario
-
-Write the scenario as a plausible blackbox attack flow using normal users,
-tenants, projects, tokens, requests, or resources.
-
-## Steps To Reproduce
-
-Prefer manual reproduction with browser actions, HTTP requests, curl, or normal
-CLI commands. If a helper script is needed, explain the manual flow it
-automates.
-
-1.
+Include when it helps triage. Explain the target-owned mistake simply first,
+then add only the technical detail needed to understand why the vulnerability
+exists.
 
 ## PoC Details
 
-Include only snippets that help triage trust the reproduction. Explain what each
-snippet does and which output proves the issue.
+Include when there is PoC material beyond the reproduction steps. Prefer manual,
+blackbox-style proof using browser actions, HTTP requests, `curl`, or normal CLI
+commands. If a helper script is necessary, explain the manual flow it automates.
+Include short snippets only when they make the proof easier to trust, and
+explain what each snippet does and what output proves the issue.
 
 ```bash
-# curl or manual command here
+# curl or manual command here, if useful
 ```
 
-## Expected Result
+## Steps To Reproduce
 
-Describe the safe behavior.
+1.
 
-## Actual Result
+## Impact
 
-Describe the vulnerable behavior and point to evidence.
+Describe the realistic attacker scenario, the victim resources affected, and the
+security consequence. Avoid abstract severity language unless the program asks
+for it.
 
-## Negative Controls
-
-Show at least one control that proves the result is not caused by lab setup,
-unsafe configuration, or excessive privileges.
-
-## Why This Is Not Expected Or Known
-
-Summarize local dedupe, public intel, advisories, issues, changelog, docs/tests,
-and timeline checks. Do not claim novelty unless those checks were actually
-performed.
-
-## Suggested Fix Or Mitigation
-
-Keep it practical and tied to the root cause.
-
-## Limitations
-
-State any uncertainty, version limits, environmental assumptions, or untested
-variants.
+Add other sections only when the program template requires them or when the
+triage context specifically needs them.

@@ -57,7 +57,7 @@ proteus --version
 Expected:
 
 ```text
-@rafabd1/proteus 0.1.11
+@rafabd1/proteus 0.1.12
 ```
 
 The codeload tarball is the recommended install path while Proteus is distributed
@@ -128,6 +128,8 @@ When available, Proteus should use persistent goal/campaign features for
 long-running objectives and subagents for bounded fronts such as Argus, Loom,
 Chaos, Libris, Mimic, Artificer, and Skeptic. The coordinator still owns
 strategy, memory, dedupe, validation gates, and final kill/promote decisions.
+Codex can use the packaged role contracts in `plugins/proteus/agents/*.md` when
+spawning subagents; Claude Code loads the same files as plugin subagents.
 
 ### CLI Runtime
 
@@ -246,10 +248,11 @@ refutation, and no realistic attacker boundary.
 ## Report Drafts
 
 Proteus report drafts are written for triagers, not for the internal research
-workflow. They should be concise, natural, and direct. They should explain the
-root cause in simple terms, present impact through a realistic attacker scenario,
-and avoid unnecessary sections or internal references to Proteus, `.vros`,
-subagents, workspace paths, or research process.
+workflow. The default shape is Title, CWE, Summary, Root Cause when applicable,
+PoC Details when applicable, Steps To Reproduce, and Impact. Add other sections
+only when the program template requires them or the triage context specifically
+needs them. Avoid internal references to Proteus, `.vros`, subagents, workspace
+paths, or research process.
 
 PoCs should prefer manual reproduction when possible: browser actions, HTTP
 requests, `curl`, normal CLI commands, or other blackbox steps an attacker could

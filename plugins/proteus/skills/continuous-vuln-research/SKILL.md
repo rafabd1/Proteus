@@ -251,6 +251,26 @@ Artificer starts only after initial gates pass. Skeptic starts only after
 technical evidence exists. A candidate cannot become report-grade until Skeptic
 and Libris have both produced recorded outputs for the pre-claim review.
 
+When the host supports subagents or parallel delegated work, use the packaged
+role contracts under `../../agents/` as the source of truth for the delegated
+fronts:
+
+```text
+../../agents/proteus-argus.md
+../../agents/proteus-loom.md
+../../agents/proteus-chaos.md
+../../agents/proteus-libris.md
+../../agents/proteus-mimic.md
+../../agents/proteus-artificer.md
+../../agents/proteus-skeptic.md
+```
+
+For Codex, read the relevant contract and pass its role requirements into the
+subagent prompt when spawning an available subagent. For Claude Code, these same
+files are plugin subagents and should appear in `/agents` after installation.
+If the host has no subagent facility, use the contracts as local execution
+checklists.
+
 ## Lab Rules
 
 Allowed:
@@ -292,22 +312,18 @@ Required report substance:
 
 ```text
 Title:
+CWE:
 Summary:
-Affected component/version:
-Root cause:
-Impact:
-Attack scenario:
+Root cause, when applicable:
+PoC details, when applicable:
 Steps to reproduce:
-Expected result:
-Actual result:
-Evidence:
-Why this is not expected/known:
-Suggested fix or mitigation:
-Limitations:
+Impact:
 ```
 
 Only include sections that help triage. If a program has its own template, map
 the same substance into that template instead of forcing this exact structure.
+Add other sections only when the program asks for them or the triage context
+specifically needs them.
 
 PoC presentation:
 
