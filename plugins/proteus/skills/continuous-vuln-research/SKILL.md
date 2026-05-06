@@ -256,9 +256,14 @@ Use memory commands as part of the research loop, not as bookkeeping after the
 fact. The coordinator should update memory whenever the result changes future
 work:
 
+- Run `proteus init --root <target-root> --name <target>` before any target
+  memory operation if the target has not already been initialized. Do not call
+  `ingest`, `plan-round`, `record`, `query`, `show`, `update surface`, `lab`, or
+  `export` against an uninitialized target.
 - Use `proteus status` at the start of a session or after reinstalling/runtime
   changes to confirm the target is initialized and to see whether SQL memory
-  already contains sources, hypotheses, decisions, rounds, and agent outputs.
+  already contains sources, hypotheses, decisions, rounds, and agent outputs. If
+  status says the target is not initialized, run `proteus init` immediately.
 - Use `proteus ingest` when local prior work exists in `findings/`, `REPORTS/`,
   `reports/`, `docs/`, or target-specific research logs. Re-run it after adding
   or editing important local notes; `unchanged` means the same content hash is
