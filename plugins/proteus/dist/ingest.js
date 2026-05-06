@@ -56,7 +56,7 @@ const TEXT_EXTENSIONS = new Set([
     ".gql"
 ]);
 function ingestPaths(db, inputs) {
-    const result = { scanned: 0, indexed: 0, skipped: 0 };
+    const result = { scanned: 0, indexed: 0, unchanged: 0, skipped: 0 };
     const roots = inputs.length > 0 ? inputs : ["findings", "REPORTS", "reports", "docs"];
     for (const input of roots) {
         const full = node_path_1.default.resolve(db.targetRoot, input);
@@ -90,8 +90,11 @@ function ingestOne(db, fullPath, result) {
     const relative = (0, paths_1.toRelative)(db.targetRoot, fullPath);
     const title = node_path_1.default.basename(fullPath);
     const kind = classifyPath(relative);
-    db.addSource(kind, relative, title, body, summarize(body));
-    result.indexed += 1;
+    const source = db.addSourceWithResult(kind, relative, title, body, summarize(body));
+    if (source.inserted)
+        result.indexed += 1;
+    else
+        result.unchanged += 1;
 }
 function classifyPath(relative) {
     const normalized = relative.toLowerCase();

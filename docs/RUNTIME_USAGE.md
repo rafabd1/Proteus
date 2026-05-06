@@ -59,8 +59,10 @@ This creates:
 node dist/cli.js ingest --root C:\path\to\target findings REPORTS reports docs
 ```
 
-Ingested content becomes searchable through full-text search and is used for
-dedupe and anti-revisit checks.
+Ingested content is stored in `.vros/memory.sqlite` and becomes available to
+coverage checks, full-text memory search, and anti-revisit decisions. Markdown
+exports are reader-facing views; SQL memory is the source of truth. Re-running
+ingest reports `unchanged` for content already present by hash.
 
 ## Observe The Environment
 
@@ -158,8 +160,17 @@ node dist/cli.js record decision --entity-type hypothesis --entity-id 1 --decisi
 
 ```powershell
 node dist/cli.js query duplicates "tenant state reused"
+node dist/cli.js query memory "tenant state reused"
+node dist/cli.js show source 1
 node dist/cli.js query revisit "auth"
 ```
+
+`query duplicates` is a coverage check over SQL memory. It favors hypotheses,
+decisions, agent outputs, rounds, surfaces, and ingested findings/reports, and
+returns compact rows with `entityType#id`, score, matched terms, reason, and
+summary. Use `show <entityType> <id>` to inspect the complete record.
+
+`query memory` is the broader FTS search for exploratory lookup.
 
 ## Record Global Learnings
 

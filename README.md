@@ -61,7 +61,7 @@ proteus --version
 Expected:
 
 ```text
-@rafabd1/proteus 0.1.21
+@rafabd1/proteus 0.1.22
 ```
 
 The codeload tarball is the recommended install path while Proteus is distributed
@@ -146,6 +146,10 @@ Ingest prior work so Proteus can dedupe and avoid repeated coverage:
 ```powershell
 proteus ingest --root C:\path\to\target findings REPORTS reports docs
 ```
+
+Ingested files are stored in `.vros/memory.sqlite`; local Markdown exports are
+only reader-facing views. Re-running ingest reports `unchanged` for content that
+is already present by hash.
 
 Observe the repository and local environment:
 
@@ -313,7 +317,9 @@ proteus record decision --entity-type <type> --entity-id <id> --decision <text> 
 proteus record agent-output --round-id <id> --role <codename> --surface <text>
 proteus update surface --id <id> [--status exhausted|low_roi|covered|blocked|watch] [--revisit <text>]
 proteus query duplicates <text>
+proteus query memory <text>
 proteus query revisit <surface>
+proteus show <source|surface|hypothesis|evidence|decision|round|agent_output|lab> <id>
 proteus export [--root <path>]
 proteus lab create --candidate-id <id> [--name <name>]
 proteus learn add --title <text> [--category <category>] [--scope <scope>] [--body <text>] [--tags a,b]
@@ -349,6 +355,8 @@ proteus_status
 proteus_ingest
 proteus_observe
 proteus_plan_round
+proteus_query_memory
+proteus_get_record
 proteus_query_duplicates
 proteus_record_hypothesis
 proteus_record_decision

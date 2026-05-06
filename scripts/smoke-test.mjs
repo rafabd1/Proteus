@@ -126,7 +126,18 @@ try {
   ]);
   const duplicates = run(["query", "duplicates", "validation gate"]);
   if (!duplicates.includes("source#") && !duplicates.includes("hypothesis#")) {
-    throw new Error("duplicate query did not return indexed records");
+    throw new Error("duplicate coverage query did not return indexed records");
+  }
+  if (!duplicates.includes("score=") || !duplicates.includes("matched=")) {
+    throw new Error("duplicate coverage query did not return summarized coverage metadata");
+  }
+  const memory = run(["query", "memory", "validation gate"]);
+  if (!memory.includes("source#") && !memory.includes("hypothesis#")) {
+    throw new Error("memory query did not return indexed records");
+  }
+  const sourceRecord = run(["show", "source", "1"]);
+  if (!sourceRecord.includes('"entityType": "source"') || !sourceRecord.includes("Prior Finding")) {
+    throw new Error("show did not return full source record");
   }
   const revisit = run(["query", "revisit", "request"]);
   if (!revisit.includes("S1") && !revisit.includes("request")) {

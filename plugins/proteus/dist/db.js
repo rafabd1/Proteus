@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProteusDb = void 0;
 exports.computeRoi = computeRoi;
 exports.createDefaultContract = createDefaultContract;
+const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
 const node_crypto_1 = __importDefault(require("node:crypto"));
 const paths_1 = require("./paths");
@@ -73,6 +74,9 @@ class ProteusDb {
             .run(target.id, json(profile), now);
     }
     addSource(kind, pathOrUrl, title, body, summary = "") {
+        return this.addSourceWithResult(kind, pathOrUrl, title, body, summary).id;
+    }
+    addSourceWithResult(kind, pathOrUrl, title, body, summary = "") {
         const target = requireTarget(this);
         const hash = sha256(body);
         const now = nowIso();
@@ -80,7 +84,7 @@ class ProteusDb {
             .prepare("SELECT id FROM sources WHERE target_id = ? AND content_hash = ?")
             .get(target.id, hash);
         if (existing)
-            return Number(existing.id);
+            return { id: Number(existing.id), inserted: false };
         const result = this.db
             .prepare(`INSERT INTO sources
           (target_id, kind, path_or_url, title, content_hash, summary, body, created_at)
@@ -88,7 +92,13 @@ class ProteusDb {
             .run(target.id, kind, pathOrUrl, title, hash, summary, body, now);
         const id = Number(result.lastInsertRowid);
         this.indexFts("source", id, `${title}\n${summary}\n${pathOrUrl}\n${body}`);
-        return id;
+        return { id, inserted: true };
+    }
+    listSources() {
+        return this.db
+            .prepare("SELECT * FROM sources ORDER BY id ASC")
+            .all()
+            .map(toSourceRow);
     }
     addSurface(input) {
         const target = requireTarget(this);
@@ -233,6 +243,192 @@ class ProteusDb {
             entityId: Number(row.entity_id),
             snippet: String(row.snippet ?? "")
         }));
+    }
+    queryCoverage(query, limit = 10) {
+        const queryTerms = tokenize(query);
+        if (queryTerms.length === 0)
+            return [];
+        const requiredOverlap = queryTerms.length <= 2 ? queryTerms.length : Math.min(4, Math.ceil(queryTerms.length * 0.35));
+        const rows = this.coverageCandidates()
+            .map((candidate) => scoreCoverageCandidate(candidate, query, queryTerms))
+            .filter((candidate) => candidate.matchedTerms.length >= requiredOverlap || candidate.phraseMatched)
+            .sort((a, b) => b.score - a.score || entityRank(a.entityType) - entityRank(b.entityType))
+            .slice(0, limit);
+        return rows.map(({ searchText: _searchText, phraseMatched: _phraseMatched, ...row }) => row);
+    }
+    getRecord(entityType, entityId) {
+        const table = tableForEntity(entityType);
+        if (!table)
+            throw new Error(`Unsupported entity type: ${entityType}`);
+        const row = this.db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(entityId);
+        if (!row)
+            return null;
+        return materializeRecord(entityType, row);
+    }
+    memoryStats() {
+        const sourcesByKind = this.db
+            .prepare("SELECT kind, COUNT(*) AS count FROM sources GROUP BY kind ORDER BY kind")
+            .all()
+            .map((row) => ({ kind: String(row.kind), count: Number(row.count) }));
+        const latestSource = this.db
+            .prepare("SELECT id, kind, path_or_url, title, created_at FROM sources ORDER BY id DESC LIMIT 1")
+            .get();
+        const latestDecision = this.db
+            .prepare("SELECT id, entity_type, entity_id, decision, created_at FROM decisions ORDER BY id DESC LIMIT 1")
+            .get();
+        return {
+            dbPath: this.dbPath,
+            dbSizeBytes: node_fs_1.default.existsSync(this.dbPath) ? node_fs_1.default.statSync(this.dbPath).size : 0,
+            targets: this.count("targets"),
+            profiles: this.count("target_profiles"),
+            sources: this.count("sources"),
+            sourcesByKind,
+            surfaces: this.count("surfaces"),
+            hypotheses: this.count("hypotheses"),
+            evidence: this.count("evidence"),
+            decisions: this.count("decisions"),
+            rounds: this.count("rounds"),
+            agentOutputs: this.count("agent_outputs"),
+            labs: this.count("labs"),
+            latestSource: latestSource
+                ? {
+                    id: Number(latestSource.id),
+                    kind: String(latestSource.kind),
+                    pathOrUrl: String(latestSource.path_or_url),
+                    title: String(latestSource.title),
+                    createdAt: String(latestSource.created_at)
+                }
+                : null,
+            latestDecision: latestDecision
+                ? {
+                    id: Number(latestDecision.id),
+                    entityType: String(latestDecision.entity_type),
+                    entityId: Number(latestDecision.entity_id),
+                    decision: String(latestDecision.decision),
+                    createdAt: String(latestDecision.created_at)
+                }
+                : null
+        };
+    }
+    count(table) {
+        const row = this.db.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get();
+        return Number(row.count);
+    }
+    coverageCandidates() {
+        const candidates = [];
+        for (const row of this.db.prepare("SELECT * FROM hypotheses").all()) {
+            candidates.push({
+                entityType: "hypothesis",
+                entityId: Number(row.id),
+                title: String(row.title),
+                status: String(row.status),
+                summary: compactSummary([row.primitive, row.attacker_boundary, row.impact_claim, row.kill_criteria, row.revisit_condition]),
+                searchText: compactSummary([row.title, row.primitive, row.attacker_boundary, row.impact_claim, row.heuristic_family, row.status, row.kill_criteria, row.revisit_condition]),
+                baseScore: 40
+            });
+        }
+        for (const row of this.db.prepare("SELECT * FROM decisions").all()) {
+            candidates.push({
+                entityType: "decision",
+                entityId: Number(row.id),
+                title: `${row.decision} ${row.entity_type}#${row.entity_id}`,
+                status: String(row.decision),
+                summary: String(row.reason ?? ""),
+                searchText: compactSummary([row.entity_type, row.decision, row.reason]),
+                baseScore: 36
+            });
+        }
+        for (const row of this.db.prepare("SELECT * FROM evidence").all()) {
+            candidates.push({
+                entityType: "evidence",
+                entityId: Number(row.id),
+                title: String(row.title),
+                status: String(row.kind),
+                summary: compactSummary([row.body, row.path_or_url, row.command]),
+                searchText: compactSummary([row.kind, row.title, row.body, row.path_or_url, row.command]),
+                baseScore: 30
+            });
+        }
+        for (const row of this.db.prepare("SELECT * FROM agent_outputs").all()) {
+            candidates.push({
+                entityType: "agent_output",
+                entityId: Number(row.id),
+                title: `${row.agent_codename} on ${row.assigned_surface}`,
+                status: String(row.validation_status),
+                summary: compactSummary([
+                    row.covered_surface_json,
+                    row.live_candidates_json,
+                    row.killed_hypotheses_json,
+                    row.probes_json,
+                    row.uncovered_areas_json
+                ]),
+                searchText: compactSummary([
+                    row.agent_codename,
+                    row.agent_role_family,
+                    row.assigned_surface,
+                    row.validation_status,
+                    row.output_path,
+                    row.covered_surface_json,
+                    row.live_candidates_json,
+                    row.killed_hypotheses_json,
+                    row.probes_json,
+                    row.uncovered_areas_json
+                ]),
+                baseScore: 34
+            });
+        }
+        for (const row of this.db.prepare("SELECT * FROM rounds").all()) {
+            candidates.push({
+                entityType: "round",
+                entityId: Number(row.id),
+                title: String(row.objective),
+                status: String(row.outcome ?? ""),
+                summary: compactSummary([
+                    row.current_understanding,
+                    row.selected_surfaces_json,
+                    row.skipped_surfaces_json,
+                    row.agent_fronts_json,
+                    row.stop_conditions_json
+                ]),
+                searchText: compactSummary([
+                    row.objective,
+                    row.current_understanding,
+                    row.selected_surfaces_json,
+                    row.skipped_surfaces_json,
+                    row.agent_fronts_json,
+                    row.validation_gates_json,
+                    row.stop_conditions_json,
+                    row.outcome
+                ]),
+                baseScore: 28
+            });
+        }
+        for (const row of this.db.prepare("SELECT * FROM surfaces").all()) {
+            candidates.push({
+                entityType: "surface",
+                entityId: Number(row.id),
+                title: String(row.name),
+                status: String(row.status),
+                summary: compactSummary([row.family, row.description, row.files_json, row.revisit_condition]),
+                searchText: compactSummary([row.name, row.family, row.description, row.files_json, row.status, row.revisit_condition]),
+                baseScore: surfaceCoverageWeight(String(row.status))
+            });
+        }
+        for (const row of this.db.prepare("SELECT * FROM sources").all()) {
+            const kind = String(row.kind);
+            candidates.push({
+                entityType: "source",
+                entityId: Number(row.id),
+                kind,
+                title: String(row.title),
+                pathOrUrl: String(row.path_or_url),
+                status: kind,
+                summary: compactSummary([row.summary]),
+                searchText: compactSummary([row.kind, row.path_or_url, row.title, row.summary, row.body]),
+                baseScore: sourceCoverageWeight(kind)
+            });
+        }
+        return candidates;
     }
     migrate() {
         this.db.exec(`
@@ -388,6 +584,16 @@ class ProteusDb {
     }
 }
 exports.ProteusDb = ProteusDb;
+function toSourceRow(row) {
+    return {
+        id: Number(row.id),
+        kind: String(row.kind),
+        pathOrUrl: String(row.path_or_url),
+        title: String(row.title),
+        summary: String(row.summary ?? ""),
+        createdAt: String(row.created_at)
+    };
+}
 function toSurfaceRow(row) {
     return {
         id: Number(row.id),
@@ -430,6 +636,129 @@ function toRoundRow(row) {
         outcome: String(row.outcome ?? ""),
         createdAt: String(row.created_at)
     };
+}
+function scoreCoverageCandidate(candidate, query, queryTerms) {
+    const normalizedSearch = normalizeText(candidate.searchText);
+    const normalizedQuery = normalizeText(query);
+    const matchedTerms = queryTerms.filter((term) => normalizedSearch.includes(term));
+    const phraseMatched = normalizedQuery.length > 0 && normalizedSearch.includes(normalizedQuery);
+    const statusBoost = candidate.status && ["discarded", "covered", "exhausted", "low_roi", "watch", "report_grade", "candidate"].includes(candidate.status)
+        ? 8
+        : 0;
+    const score = candidate.baseScore + matchedTerms.length * 12 + (phraseMatched ? 30 : 0) + statusBoost;
+    const reasonParts = [
+        phraseMatched ? "phrase match" : `${matchedTerms.length}/${queryTerms.length} terms matched`,
+        candidate.status ? `status=${candidate.status}` : "",
+        candidate.pathOrUrl ? `path=${candidate.pathOrUrl}` : ""
+    ].filter(Boolean);
+    return {
+        ...candidate,
+        score,
+        matchedTerms,
+        phraseMatched,
+        reason: reasonParts.join("; "),
+        summary: truncateText(candidate.summary || candidate.searchText, 280)
+    };
+}
+function tokenize(value) {
+    const stopwords = new Set([
+        "the",
+        "and",
+        "for",
+        "with",
+        "from",
+        "that",
+        "this",
+        "uma",
+        "com",
+        "para",
+        "por",
+        "que",
+        "dos",
+        "das",
+        "the",
+        "area",
+        "surface",
+        "bug",
+        "vulnerability",
+        "finding"
+    ]);
+    return Array.from(new Set(normalizeText(value)
+        .split(/\s+/)
+        .filter((term) => term.length >= 3 && !stopwords.has(term))));
+}
+function normalizeText(value) {
+    return value
+        .toLowerCase()
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9_./:-]+/g, " ")
+        .trim();
+}
+function compactSummary(values) {
+    return values
+        .filter((value) => value !== null && value !== undefined)
+        .map((value) => String(value).trim())
+        .filter(Boolean)
+        .join("\n")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+function truncateText(value, limit) {
+    return value.length <= limit ? value : `${value.slice(0, limit - 3)}...`;
+}
+function entityRank(entityType) {
+    return ["hypothesis", "decision", "agent_output", "surface", "source", "evidence", "round", "lab"].indexOf(entityType);
+}
+function sourceCoverageWeight(kind) {
+    if (kind === "finding")
+        return 32;
+    if (kind === "report")
+        return 30;
+    if (kind === "advisory")
+        return 28;
+    if (kind === "doc")
+        return 18;
+    return 16;
+}
+function surfaceCoverageWeight(status) {
+    if (["covered", "exhausted", "low_roi", "blocked", "watch"].includes(status))
+        return 30;
+    return 18;
+}
+function tableForEntity(entityType) {
+    const tables = {
+        source: "sources",
+        surface: "surfaces",
+        hypothesis: "hypotheses",
+        evidence: "evidence",
+        decision: "decisions",
+        round: "rounds",
+        agent_output: "agent_outputs",
+        lab: "labs"
+    };
+    return tables[entityType] ?? null;
+}
+function materializeRecord(entityType, row) {
+    if (entityType === "source") {
+        return {
+            entityType,
+            id: Number(row.id),
+            kind: row.kind,
+            pathOrUrl: row.path_or_url,
+            title: row.title,
+            summary: row.summary,
+            body: row.body,
+            createdAt: row.created_at
+        };
+    }
+    if (entityType === "surface")
+        return { entityType, ...toSurfaceRow(row) };
+    if (entityType === "hypothesis")
+        return { entityType, ...toHypothesisRow(row) };
+    if (entityType === "round")
+        return { entityType, ...toRoundRow(row) };
+    return { entityType, ...row };
 }
 function computeRoi(roi) {
     return (roi.impactPotential +

@@ -61,6 +61,9 @@ function main() {
             case "query":
                 cmdQuery(db, subcommand, parsed);
                 break;
+            case "show":
+                cmdShow(db, parsed);
+                break;
             case "export":
                 cmdExport(db);
                 break;
@@ -98,21 +101,30 @@ function cmdStatus(db) {
         console.log("Target not initialized.");
         return;
     }
-    const surfaces = db.listSurfaces();
-    const hypotheses = db.listHypotheses();
-    const rounds = db.listRounds();
+    const stats = db.memoryStats();
     console.log(`Target: ${target.name}`);
     console.log(`Root: ${target.rootPath}`);
-    console.log(`Surfaces: ${surfaces.length}`);
-    console.log(`Hypotheses: ${hypotheses.length}`);
-    console.log(`Rounds: ${rounds.length}`);
-    if (rounds[0])
-        console.log(`Latest round: ${rounds[0].id} (${rounds[0].outcome})`);
+    console.log(`Memory: ${stats.dbPath} (${stats.dbSizeBytes} bytes)`);
+    console.log(`Sources: ${stats.sources}${stats.sourcesByKind.length > 0 ? ` (${stats.sourcesByKind.map((row) => `${row.kind}=${row.count}`).join(", ")})` : ""}`);
+    console.log(`Surfaces: ${stats.surfaces}`);
+    console.log(`Hypotheses: ${stats.hypotheses}`);
+    console.log(`Evidence: ${stats.evidence}`);
+    console.log(`Decisions: ${stats.decisions}`);
+    console.log(`Rounds: ${stats.rounds}`);
+    console.log(`Agent outputs: ${stats.agentOutputs}`);
+    console.log(`Labs: ${stats.labs}`);
+    console.log(`Profiles: ${stats.profiles}`);
+    if (stats.latestSource) {
+        console.log(`Latest source: source#${stats.latestSource.id} [${stats.latestSource.kind}] ${stats.latestSource.pathOrUrl}`);
+    }
+    if (stats.latestDecision) {
+        console.log(`Latest decision: decision#${stats.latestDecision.id} ${stats.latestDecision.decision} ${stats.latestDecision.entityType}#${stats.latestDecision.entityId}`);
+    }
 }
 function cmdIngest(db, inputs) {
     requireInitialized(db);
     const result = (0, ingest_1.ingestPaths)(db, inputs);
-    console.log(`Ingest scanned=${result.scanned} indexed=${result.indexed} skipped=${result.skipped}`);
+    console.log(`Ingest scanned=${result.scanned} indexed=${result.indexed} unchanged=${result.unchanged} skipped=${result.skipped}`);
 }
 function cmdObserve(db) {
     requireInitialized(db);
@@ -255,14 +267,30 @@ function cmdQuery(db, subcommand, parsed) {
     requireInitialized(db);
     if (subcommand === "duplicates") {
         const text = parsed.command.slice(2).join(" ") || requiredString(parsed, "text");
-        const rows = db.search(text);
+        const rows = db.queryCoverage(text, getNumber(parsed, "limit") ?? 10);
         if (rows.length === 0) {
-            console.log("No possible duplicates found.");
+            console.log("No prior coverage found.");
             return;
         }
         for (const row of rows) {
-            console.log(`${row.entityType}#${row.entityId}: ${row.snippet}`);
+            console.log(`${row.entityType}#${row.entityId} score=${row.score} ${row.status ? `status=${row.status} ` : ""}${row.title}`);
+            if (row.pathOrUrl)
+                console.log(`  path=${row.pathOrUrl}`);
+            console.log(`  matched=${row.matchedTerms.join(", ") || "-"}`);
+            console.log(`  reason=${row.reason}`);
+            console.log(`  summary=${row.summary || "-"}`);
         }
+        return;
+    }
+    if (subcommand === "memory") {
+        const text = parsed.command.slice(2).join(" ") || requiredString(parsed, "text");
+        const rows = db.search(text, getNumber(parsed, "limit") ?? 20);
+        if (rows.length === 0) {
+            console.log("No memory matches found.");
+            return;
+        }
+        for (const row of rows)
+            console.log(`${row.entityType}#${row.entityId}: ${row.snippet}`);
         return;
     }
     if (subcommand === "revisit") {
@@ -278,7 +306,20 @@ function cmdQuery(db, subcommand, parsed) {
             console.log("No matching surfaces found.");
         return;
     }
-    throw new Error("query requires one of: duplicates, revisit");
+    throw new Error("query requires one of: duplicates, memory, revisit");
+}
+function cmdShow(db, parsed) {
+    requireInitialized(db);
+    const entityType = parsed.command[1] ?? requiredString(parsed, "entity-type");
+    const entityId = Number(parsed.command[2] ?? requiredString(parsed, "id"));
+    if (!Number.isFinite(entityId))
+        throw new Error("show requires a numeric id");
+    const record = db.getRecord(entityType, entityId);
+    if (!record) {
+        console.log(`No record found for ${entityType}#${entityId}.`);
+        return;
+    }
+    console.log(JSON.stringify(record, null, 2));
 }
 function cmdExport(db) {
     requireInitialized(db);
@@ -426,7 +467,9 @@ Usage:
   proteus record agent-output --round-id <id> --role <codename> --surface <text>
   proteus update surface --id <id> [--status exhausted|low_roi|covered|blocked|watch] [--revisit <text>]
   proteus query duplicates <text>
+  proteus query memory <text>
   proteus query revisit <surface>
+  proteus show <source|surface|hypothesis|evidence|decision|round|agent_output|lab> <id>
   proteus export [--root <path>]
   proteus lab create --candidate-id <id> [--name <name>]
   proteus learn add --title <text> [--category <category>] [--scope <scope>] [--body <text>] [--tags a,b]

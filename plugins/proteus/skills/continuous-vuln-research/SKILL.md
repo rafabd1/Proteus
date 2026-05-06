@@ -106,6 +106,13 @@ record evidence, and render explicitly supplied planning content. Query global
 learnings separately, review them in the coordinator context, and manually fold
 only relevant items into the round plan.
 
+Treat `.vros/memory.sqlite` as the source of truth. Local Markdown files are
+exports for human reading, not the primary state store. Use
+`proteus query duplicates` to check whether an area, candidate, primitive, root
+cause, or impact has already been covered. It returns compact coverage rows;
+use `proteus show <entityType> <id>` when the full record is needed. Use
+`proteus query memory` only for broad exploratory full-text search.
+
 When using `proteus plan-round --plan-json`, write a JSON file with this shape
 before calling the command. The packaged template is
 `plugins/proteus/templates/round-input.json`:
@@ -253,6 +260,7 @@ proteus ingest --root <target-root> findings REPORTS reports docs
 proteus observe --root <target-root>
 proteus plan-round --root <target-root> --objective "<objective>" --plan-json round-input.json --write
 proteus query duplicates --root <target-root> "<candidate text>"
+proteus show --root <target-root> <entityType> <id>
 proteus record hypothesis --root <target-root> --title "<title>" --impact "<impact>"
 proteus record agent-output --root <target-root> --round-id <id> --role argus --surface "<surface>"
 proteus update surface --root <target-root> --id <id> --status exhausted --revisit "<condition>"

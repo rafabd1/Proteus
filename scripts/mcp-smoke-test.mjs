@@ -82,6 +82,9 @@ try {
   if (!text.includes("mcp-smoke-target")) {
     throw new Error("proteus_status did not return initialized target");
   }
+  if (!text.includes('"memory"')) {
+    throw new Error("proteus_status did not return memory stats");
+  }
 
   await request("tools/call", {
     name: "proteus_plan_round",
@@ -134,6 +137,22 @@ try {
   });
   if (!String(globalLearning.content?.[0]?.text ?? "").includes("MCP global learning")) {
     throw new Error("proteus_query_global_learnings did not return expected learning");
+  }
+  const coverage = await request("tools/call", {
+    name: "proteus_query_duplicates",
+    arguments: { root: tmpRoot, text: "Smoke daemon protocol surface", limit: 5 }
+  });
+  const coverageText = String(coverage.content?.[0]?.text ?? "");
+  if (!coverageText.includes('"score"') || !coverageText.includes('"matchedTerms"')) {
+    throw new Error("proteus_query_duplicates did not return coverage metadata");
+  }
+  const record = await request("tools/call", {
+    name: "proteus_get_record",
+    arguments: { root: tmpRoot, entityType: "surface", entityId: 1 }
+  });
+  const recordText = String(record.content?.[0]?.text ?? "");
+  if (!recordText.includes('"entityType": "surface"')) {
+    throw new Error("proteus_get_record did not return full record");
   }
   await request("tools/call", {
     name: "proteus_update_surface",

@@ -44,7 +44,7 @@ const tools: ToolDefinition[] = [
   {
     name: "proteus_status",
     title: "Read Proteus Status",
-    description: "Return target, surface, hypothesis, and round counts.",
+    description: "Return target and SQL memory counts.",
     inputSchema: schema({ root: stringProp("Target root path.") }, ["root"]),
     handler: ({ root }) =>
       withDb(str(root), (db) => {
@@ -52,9 +52,7 @@ const tools: ToolDefinition[] = [
         return {
           initialized: Boolean(target),
           target,
-          surfaces: db.listSurfaces().length,
-          hypotheses: db.listHypotheses().length,
-          rounds: db.listRounds().length
+          memory: db.memoryStats()
         };
       })
   },
@@ -114,12 +112,32 @@ const tools: ToolDefinition[] = [
   {
     name: "proteus_query_duplicates",
     title: "Query Possible Duplicates",
-    description: "Full-text search Proteus memory for duplicate or related prior work.",
+    description: "Search SQL memory for prior coverage of an area, candidate, primitive, root cause, or impact claim.",
     inputSchema: schema(
       { root: stringProp("Target root path."), text: stringProp("Candidate text, primitive, or impact to search."), limit: numberProp("Max rows.") },
       ["root", "text"]
     ),
+    handler: ({ root, text, limit }) => withDb(str(root), (db) => db.queryCoverage(str(text), num(limit, 10)))
+  },
+  {
+    name: "proteus_query_memory",
+    title: "Query Memory",
+    description: "Run a broad full-text search over Proteus memory.",
+    inputSchema: schema(
+      { root: stringProp("Target root path."), text: stringProp("Search text."), limit: numberProp("Max rows.") },
+      ["root", "text"]
+    ),
     handler: ({ root, text, limit }) => withDb(str(root), (db) => db.search(str(text), num(limit, 20)))
+  },
+  {
+    name: "proteus_get_record",
+    title: "Get Memory Record",
+    description: "Return the full SQL memory record for an entityType/entityId pair returned by Proteus queries.",
+    inputSchema: schema(
+      { root: stringProp("Target root path."), entityType: stringProp("Entity type."), entityId: numberProp("Entity id.") },
+      ["root", "entityType", "entityId"]
+    ),
+    handler: ({ root, entityType, entityId }) => withDb(str(root), (db) => db.getRecord(str(entityType), num(entityId, 0)))
   },
   {
     name: "proteus_record_hypothesis",

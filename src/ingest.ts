@@ -56,11 +56,12 @@ const TEXT_EXTENSIONS = new Set([
 export interface IngestResult {
   scanned: number;
   indexed: number;
+  unchanged: number;
   skipped: number;
 }
 
 export function ingestPaths(db: ProteusDb, inputs: string[]): IngestResult {
-  const result: IngestResult = { scanned: 0, indexed: 0, skipped: 0 };
+  const result: IngestResult = { scanned: 0, indexed: 0, unchanged: 0, skipped: 0 };
   const roots = inputs.length > 0 ? inputs : ["findings", "REPORTS", "reports", "docs"];
   for (const input of roots) {
     const full = path.resolve(db.targetRoot, input);
@@ -97,8 +98,9 @@ function ingestOne(db: ProteusDb, fullPath: string, result: IngestResult): void 
   const relative = toRelative(db.targetRoot, fullPath);
   const title = path.basename(fullPath);
   const kind = classifyPath(relative);
-  db.addSource(kind, relative, title, body, summarize(body));
-  result.indexed += 1;
+  const source = db.addSourceWithResult(kind, relative, title, body, summarize(body));
+  if (source.inserted) result.indexed += 1;
+  else result.unchanged += 1;
 }
 
 function classifyPath(relative: string): string {
@@ -119,4 +121,3 @@ function summarize(body: string): string {
     .join("\n")
     .slice(0, 2000);
 }
-
