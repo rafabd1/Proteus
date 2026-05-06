@@ -1,9 +1,10 @@
 # Proteus Installation
 
-Proteus has two install surfaces:
+Proteus has three install surfaces:
 
 - CLI/runtime: the `proteus` and `proteus-mcp` commands.
 - Codex plugin: installed through a Codex plugin marketplace.
+- Claude Code project port: `/proteus`, project subagents, and MCP config.
 
 ## CLI Install From GitHub
 
@@ -15,7 +16,7 @@ proteus --version
 Expected shape:
 
 ```text
-@rafabd1/proteus 0.1.9
+@rafabd1/proteus 0.1.10
 ```
 
 The GitHub tarball install uses the committed `dist/` runtime and has no
@@ -90,6 +91,34 @@ It exposes the plugin at:
 ```text
 plugins/proteus
 ```
+
+## Claude Code Project Port
+
+Proteus includes project-level Claude Code files:
+
+```text
+.claude/commands/proteus.md
+.claude/agents/proteus-*.md
+.mcp.json
+CLAUDE.md
+```
+
+Use from Claude Code:
+
+```text
+/proteus initialize continuous vulnerability research for this repository
+/proteus plan the next high-ROI offensive research round
+/proteus validate this candidate with realistic PoC gates and negative controls
+```
+
+The root `.mcp.json` exposes the Proteus MCP server to Claude Code:
+
+```text
+node ./plugins/proteus/scripts/proteus-mcp.cjs
+```
+
+Inside Claude Code, use `/mcp` to approve or inspect the project MCP server and
+`/agents` to inspect the project subagents.
 
 ## Verify Runtime
 

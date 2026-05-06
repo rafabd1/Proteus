@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "proteus": {
+      "command": "node",
+      "args": [
+        "./plugins/proteus/scripts/proteus-mcp.cjs"
+      ],
+      "env": {}
+    }
+  }
+}
