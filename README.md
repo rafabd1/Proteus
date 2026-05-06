@@ -57,7 +57,7 @@ proteus --version
 Expected:
 
 ```text
-@rafabd1/proteus 0.1.14
+@rafabd1/proteus 0.1.15
 ```
 
 The codeload tarball is the recommended install path while Proteus is distributed
@@ -133,8 +133,8 @@ spawning subagents by reading the contract and inlining it into the delegated
 prompt. These paths are plugin-package paths, not target-workspace paths. Claude
 Code loads the same files as plugin subagents.
 If the package path is not directly exposed, coordinators should resolve
-contracts from the installed plugin cache or from the current development
-checkout at `C:\Users\rafae\Desktop\Projetos\Proteus\plugins\proteus\agents`.
+contracts from the installed plugin package/cache, never from the target
+workspace.
 
 ### CLI Runtime
 

@@ -274,14 +274,16 @@ Resolve contracts in this order:
 1. From this skill file:
    <SKILL.md directory>/../../agents/<contract>.md
 
-2. From the current development checkout:
-   C:\Users\rafae\Desktop\Projetos\Proteus\plugins\proteus\agents\<contract>.md
+2. From the host-exposed Proteus plugin root, when available:
+   <proteus plugin root>/agents/<contract>.md
 
 3. From an installed Codex plugin cache:
-   %USERPROFILE%\.codex\plugins\cache\proteus-marketplace\proteus\*\agents\<contract>.md
+   $CODEX_HOME/plugins/cache/proteus-marketplace/proteus/*/agents/<contract>.md
+   or ~/.codex/plugins/cache/proteus-marketplace/proteus/*/agents/<contract>.md
 
-4. From an installed Claude Code plugin cache, if present:
-   %USERPROFILE%\.claude\plugins\cache\**\proteus*\agents\<contract>.md
+4. In Claude Code, prefer the native installed plugin subagents shown in
+   `/agents`; only use filesystem lookup if Claude exposes the installed
+   Proteus plugin package root.
 ```
 
 For Codex, the coordinator should read the relevant contract itself and inline
