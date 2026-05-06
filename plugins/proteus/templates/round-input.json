@@ -1,0 +1,49 @@
+{
+  "currentUnderstanding": "Coordinator-written summary of what is known about the target, based on prior memory, code reading, observed environment, and dedupe/intel checks. Do not let Proteus generate this.",
+  "selectedSurfaces": [
+    {
+      "id": 1,
+      "name": "Specific bounded surface selected by the coordinator",
+      "family": "short-family-name",
+      "roiScore": 0,
+      "reason": "Coordinator-written reason for selecting this surface now.",
+      "files": [
+        "relative/path/from/target/root.ext"
+      ],
+      "revisitCondition": "When this surface should be reopened after it is covered, killed, or deferred."
+    }
+  ],
+  "skippedSurfaces": [
+    {
+      "id": 2,
+      "name": "Specific surface skipped this round",
+      "family": "short-family-name",
+      "roiScore": 0,
+      "reason": "Coordinator-written reason for skipping, such as duplicate, low ROI, blocked, already covered, or out of scope.",
+      "files": [],
+      "revisitCondition": "Condition that would make this worth revisiting."
+    }
+  ],
+  "agentFronts": [
+    {
+      "codename": "argus",
+      "assignedSurfaceIds": [
+        1
+      ],
+      "purpose": "Bounded objective for this front, written by the coordinator.",
+      "requiredOutput": [
+        "covered surface map",
+        "live candidates",
+        "killed hypotheses with evidence",
+        "concrete probes",
+        "recommended next split"
+      ]
+    }
+  ],
+  "stopConditions": [
+    "Report-grade candidate needs user decision.",
+    "Selected surfaces are exhausted with recorded evidence.",
+    "External blocker requires credentials or infrastructure."
+  ],
+  "replanTrigger": "When fronts return, integrate evidence and have the coordinator write the next round input."
+}

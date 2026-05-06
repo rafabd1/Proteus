@@ -106,6 +106,51 @@ record evidence, and render explicitly supplied planning content. Query global
 learnings separately, review them in the coordinator context, and manually fold
 only relevant items into the round plan.
 
+When using `proteus plan-round --plan-json`, write a JSON file with this shape
+before calling the command. The packaged template is
+`plugins/proteus/templates/round-input.json`:
+
+```json
+{
+  "currentUnderstanding": "Coordinator-written target understanding.",
+  "selectedSurfaces": [
+    {
+      "id": 1,
+      "name": "Specific bounded surface",
+      "family": "short-family-name",
+      "roiScore": 0,
+      "reason": "Coordinator-written selection reason.",
+      "files": ["relative/path/from/target/root.ext"],
+      "revisitCondition": "When to revisit this surface."
+    }
+  ],
+  "skippedSurfaces": [
+    {
+      "id": 2,
+      "name": "Specific skipped surface",
+      "family": "short-family-name",
+      "roiScore": 0,
+      "reason": "Coordinator-written skip reason.",
+      "files": [],
+      "revisitCondition": "When to reconsider it."
+    }
+  ],
+  "agentFronts": [
+    {
+      "codename": "argus",
+      "assignedSurfaceIds": [1],
+      "purpose": "Bounded objective for this front.",
+      "requiredOutput": ["covered surface map", "live candidates", "killed hypotheses with evidence"]
+    }
+  ],
+  "stopConditions": ["Report-grade candidate needs user decision."],
+  "replanTrigger": "Coordinator-written trigger for the next round."
+}
+```
+
+Valid `codename` values are `argus`, `loom`, `chaos`, `libris`, `mimic`,
+`artificer`, and `skeptic`.
+
 ## Hypothesis Heuristics
 
 Prefer:

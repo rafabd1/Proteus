@@ -94,6 +94,38 @@ The command records the round in memory and optionally writes a Markdown plan.
 It does not select targets, rank surfaces, assign fronts, or generate strategic
 understanding by itself.
 
+Minimal `round-input.json` shape:
+
+```json
+{
+  "currentUnderstanding": "Coordinator-written target understanding.",
+  "selectedSurfaces": [
+    {
+      "id": 1,
+      "name": "Specific bounded surface",
+      "family": "short-family-name",
+      "roiScore": 0,
+      "reason": "Coordinator-written selection reason.",
+      "files": ["relative/path/from/target/root.ext"],
+      "revisitCondition": "When to revisit this surface."
+    }
+  ],
+  "skippedSurfaces": [],
+  "agentFronts": [
+    {
+      "codename": "argus",
+      "assignedSurfaceIds": [1],
+      "purpose": "Bounded objective for this front.",
+      "requiredOutput": ["covered surface map", "live candidates", "killed hypotheses with evidence"]
+    }
+  ],
+  "stopConditions": ["Report-grade candidate needs user decision."],
+  "replanTrigger": "Coordinator-written trigger for the next round."
+}
+```
+
+The packaged template is `plugins/proteus/templates/round-input.json`.
+
 ## Generate Agent Prompts
 
 ```powershell
