@@ -83,58 +83,20 @@ $proteus:continuous-vuln-research
 
 ### Claude Code
 
-Proteus ships project-level Claude Code integration:
+Install directly inside Claude Code:
 
 ```text
-.claude/commands/proteus.md
-.claude/agents/proteus-*.md
-.mcp.json
-CLAUDE.md
+/plugin marketplace add rafabd1/Proteus
+/plugin install proteus@proteus-marketplace
 ```
 
-Direct user-level install from a fresh checkout:
-
-```powershell
-git clone https://github.com/rafabd1/Proteus
-cd Proteus
-npm install -g https://codeload.github.com/rafabd1/Proteus/tar.gz/refs/heads/main
-New-Item -ItemType Directory -Force ~/.claude/commands, ~/.claude/agents
-Copy-Item .claude/commands/proteus.md ~/.claude/commands/proteus.md -Force
-Copy-Item .claude/agents/proteus-*.md ~/.claude/agents/ -Force
-claude mcp add proteus --scope user -- proteus-mcp
-```
-
-From a Claude Code session in the repository, use:
+Then use:
 
 ```text
 /proteus initialize continuous vulnerability research for this repository
 /proteus plan the next high-ROI offensive research round
 /proteus validate this candidate with realistic PoC gates and negative controls
 /proteus draft a triage-ready report without internal workflow references
-```
-
-The Claude Code port provides the same Proteus codenames as project subagents:
-
-```text
-proteus-argus
-proteus-loom
-proteus-chaos
-proteus-libris
-proteus-mimic
-proteus-artificer
-proteus-skeptic
-```
-
-Use `/mcp` inside Claude Code to approve or inspect the project MCP server.
-
-For user-level use across many Claude Code projects from an existing Proteus
-checkout, copy the command/agents into your Claude Code home:
-
-```powershell
-New-Item -ItemType Directory -Force ~/.claude/commands, ~/.claude/agents
-Copy-Item .claude/commands/proteus.md ~/.claude/commands/proteus.md -Force
-Copy-Item .claude/agents/proteus-*.md ~/.claude/agents/ -Force
-claude mcp add proteus --scope user -- proteus-mcp
 ```
 
 ### Codex Plugin
@@ -391,7 +353,6 @@ Project layout:
 ```text
 docs/
   ARCHITECTURE.md
-  CLAUDE_CODE.md
   DEVELOPMENT_PLAN.md
   INSTALLATION.md
   MEMORY_MODEL.md
@@ -438,7 +399,6 @@ coverage against temporary targets.
 ## Documentation
 
 - [Installation](docs/INSTALLATION.md)
-- [Claude Code port](docs/CLAUDE_CODE.md)
 - [Runtime usage](docs/RUNTIME_USAGE.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Requirements](docs/REQUIREMENTS.md)

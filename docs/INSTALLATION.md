@@ -94,31 +94,14 @@ plugins/proteus
 
 ## Claude Code Project Port
 
-Proteus includes project-level Claude Code files:
+Install directly inside Claude Code:
 
 ```text
-.claude/commands/proteus.md
-.claude/agents/proteus-*.md
-.mcp.json
-CLAUDE.md
+/plugin marketplace add rafabd1/Proteus
+/plugin install proteus@proteus-marketplace
 ```
 
-Use from Claude Code:
-
-```text
-/proteus initialize continuous vulnerability research for this repository
-/proteus plan the next high-ROI offensive research round
-/proteus validate this candidate with realistic PoC gates and negative controls
-```
-
-The root `.mcp.json` exposes the Proteus MCP server to Claude Code:
-
-```text
-node ./plugins/proteus/scripts/proteus-mcp.cjs
-```
-
-Inside Claude Code, use `/mcp` to approve or inspect the project MCP server and
-`/agents` to inspect the project subagents.
+Then use `/proteus` from Claude Code.
 
 ## Verify Runtime
 
