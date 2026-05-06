@@ -1,0 +1,12 @@
+{
+  "name": "proteus",
+  "version": "0.1.11",
+  "description": "Structured, continuous vulnerability research with memory, strategy, and realistic validation.",
+  "author": {
+    "name": "rafabd1",
+    "email": "rbd.sye@gmail.com"
+  },
+  "homepage": "https://github.com/rafabd1/Proteus",
+  "repository": "https://github.com/rafabd1/Proteus",
+  "license": "GPL-3.0-or-later"
+}

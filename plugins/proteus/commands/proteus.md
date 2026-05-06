@@ -1,3 +1,7 @@
+---
+description: Run Proteus continuous vulnerability research for the current target.
+---
+
 # Proteus Continuous Vulnerability Research
 
 Run the Proteus workflow for the current repository or for the target described

@@ -46,11 +46,11 @@ Responsibilities:
 Implementation:
 
 - Codex plugin manifest and skill;
-- Claude Code slash command, subagents, and `CLAUDE.md`;
+- Claude Code plugin manifest, slash command, subagents, and MCP config;
 - `SKILL.md`;
 - Markdown templates;
 - PowerShell and POSIX wrappers under `plugins/proteus/scripts`;
-- MCP configuration under `plugins/proteus/.mcp.json` and root `.mcp.json`.
+- MCP configuration under `plugins/proteus/.mcp.json`.
 
 ### Coordinator Runtime
 

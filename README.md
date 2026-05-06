@@ -42,7 +42,7 @@ Proteus has three install surfaces:
 
 - CLI/runtime: `proteus` and `proteus-mcp`
 - Codex plugin: the `continuous-vuln-research` skill plus MCP configuration
-- Claude Code project port: `/proteus`, project subagents, and `.mcp.json`
+- Claude Code plugin: `/proteus:proteus`, plugin subagents, and plugin MCP configuration
 
 ### 1. Install The CLI
 
@@ -57,7 +57,7 @@ proteus --version
 Expected:
 
 ```text
-@rafabd1/proteus 0.1.10
+@rafabd1/proteus 0.1.11
 ```
 
 The codeload tarball is the recommended install path while Proteus is distributed
@@ -93,10 +93,10 @@ Install directly inside Claude Code:
 Then use:
 
 ```text
-/proteus initialize continuous vulnerability research for this repository
-/proteus plan the next high-ROI offensive research round
-/proteus validate this candidate with realistic PoC gates and negative controls
-/proteus draft a triage-ready report without internal workflow references
+/proteus:proteus initialize continuous vulnerability research for this repository
+/proteus:proteus plan the next high-ROI offensive research round
+/proteus:proteus validate this candidate with realistic PoC gates and negative controls
+/proteus:proteus draft a triage-ready report without internal workflow references
 ```
 
 ### Codex Plugin
@@ -289,10 +289,10 @@ Codex starts the plugin MCP server through:
 plugins/proteus/.mcp.json
 ```
 
-Claude Code can use the project MCP server through:
+Claude Code loads the plugin MCP server through:
 
 ```text
-.mcp.json
+plugins/proteus/.mcp.json
 ```
 
 The server exposes:
@@ -358,13 +358,15 @@ docs/
   MEMORY_MODEL.md
   REQUIREMENTS.md
   RUNTIME_USAGE.md
-.claude/
-  commands/proteus.md
-  agents/proteus-*.md
+.claude-plugin/
+  marketplace.json
 plugins/
   proteus/
+    .claude-plugin/plugin.json
     .codex-plugin/plugin.json
     .mcp.json
+    agents/proteus-*.md
+    commands/proteus.md
     dist/
     scripts/proteus-mcp.cjs
     skills/continuous-vuln-research/SKILL.md

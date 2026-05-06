@@ -322,7 +322,7 @@ Generate Markdown exports from memory:
 Keep assistant integrations as thin interaction layers over the same runtime:
 
 - Codex manifest and skill;
-- Claude Code command, agents, and `CLAUDE.md`;
+- Claude Code plugin manifest, command, agents, and MCP config;
 - templates;
 - scripts;
 - MCP tools.

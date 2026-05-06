@@ -34,8 +34,20 @@ try {
   );
 
   run(["init", "--name", "smoke-target"]);
+  const status = run(["status"]);
+  if (!status.includes("smoke-target")) {
+    throw new Error("status did not return initialized target");
+  }
   run(["ingest", "docs"]);
   run(["observe"]);
+  const roles = run(["roles"]);
+  if (!roles.includes("Argus") || !roles.includes("Skeptic")) {
+    throw new Error("roles did not list expected Proteus fronts");
+  }
+  const prompt = run(["prompt", "--role", "skeptic", "--surface", "Smoke request surface"]);
+  if (!prompt.includes("Skeptic") || !prompt.includes("Smoke request surface")) {
+    throw new Error("prompt did not render expected role instructions");
+  }
   run([
     "learn",
     "add",
@@ -53,6 +65,10 @@ try {
   const learnings = run(["learn", "query", "exploitability", "--scope", "smoke"]);
   if (!learnings.includes("Prefer smoke exploitability")) {
     throw new Error("global learning query did not return expected record");
+  }
+  const targetScopedLearnings = run(["learn", "query", "--target-scope"]);
+  if (!targetScopedLearnings.includes("Prefer smoke exploitability")) {
+    throw new Error("target-scope global learning query did not return expected record");
   }
   run(["plan-round", "--objective", "Smoke high-ROI round", "--write"]);
   run([
@@ -84,9 +100,37 @@ try {
     "--score",
     "10"
   ]);
+  run([
+    "record",
+    "evidence",
+    "--title",
+    "Smoke evidence",
+    "--kind",
+    "command-output",
+    "--body",
+    "Smoke evidence body"
+  ]);
+  run([
+    "record",
+    "decision",
+    "--entity-type",
+    "hypothesis",
+    "--entity-id",
+    "1",
+    "--decision",
+    "candidate",
+    "--reason",
+    "Smoke candidate decision",
+    "--evidence-ids",
+    "1"
+  ]);
   const duplicates = run(["query", "duplicates", "validation gate"]);
   if (!duplicates.includes("source#") && !duplicates.includes("hypothesis#")) {
     throw new Error("duplicate query did not return indexed records");
+  }
+  const revisit = run(["query", "revisit", "request"]);
+  if (!revisit.includes("S1") && !revisit.includes("request")) {
+    throw new Error("revisit query did not return expected surface");
   }
   run(["lab", "create", "--candidate-id", "1", "--name", "smoke-lab"]);
   run(["export"]);

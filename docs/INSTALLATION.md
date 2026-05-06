@@ -4,7 +4,7 @@ Proteus has three install surfaces:
 
 - CLI/runtime: the `proteus` and `proteus-mcp` commands.
 - Codex plugin: installed through a Codex plugin marketplace.
-- Claude Code project port: `/proteus`, project subagents, and MCP config.
+- Claude Code plugin: `/proteus:proteus`, plugin subagents, and MCP config.
 
 ## CLI Install From GitHub
 
@@ -16,19 +16,12 @@ proteus --version
 Expected shape:
 
 ```text
-@rafabd1/proteus 0.1.10
+@rafabd1/proteus 0.1.11
 ```
 
 The GitHub tarball install uses the committed `dist/` runtime and has no
 install-time build lifecycle, so it does not need to compile TypeScript on the
 installing machine.
-
-On npm versions where GitHub shorthand works reliably, this equivalent form may
-also be used:
-
-```powershell
-npm install -g github:rafabd1/Proteus
-```
 
 After publishing to npm, the registry install should be:
 
@@ -40,7 +33,7 @@ proteus --version
 ## CLI Upgrade
 
 ```powershell
-npm install -g github:rafabd1/Proteus
+npm install -g https://codeload.github.com/rafabd1/Proteus/tar.gz/refs/heads/main
 ```
 
 After npm publishing:
@@ -92,7 +85,7 @@ It exposes the plugin at:
 plugins/proteus
 ```
 
-## Claude Code Project Port
+## Claude Code Plugin Install
 
 Install directly inside Claude Code:
 
@@ -101,7 +94,7 @@ Install directly inside Claude Code:
 /plugin install proteus@proteus-marketplace
 ```
 
-Then use `/proteus` from Claude Code.
+Then use `/proteus:proteus` from Claude Code.
 
 ## Verify Runtime
 

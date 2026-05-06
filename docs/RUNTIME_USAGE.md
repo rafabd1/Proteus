@@ -3,7 +3,7 @@
 ## Install
 
 ```powershell
-npm install -g github:rafabd1/Proteus
+npm install -g https://codeload.github.com/rafabd1/Proteus/tar.gz/refs/heads/main
 proteus --version
 ```
 

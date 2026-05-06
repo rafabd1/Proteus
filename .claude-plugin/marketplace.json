@@ -1,0 +1,24 @@
+{
+  "name": "proteus-marketplace",
+  "owner": {
+    "name": "rafabd1",
+    "email": "rbd.sye@gmail.com"
+  },
+  "version": "0.1.11",
+  "description": "Proteus plugins for structured, exploitability-driven vulnerability research.",
+  "plugins": [
+    {
+      "name": "proteus",
+      "source": "./plugins/proteus",
+      "description": "Structured, continuous vulnerability research with memory, strategy, and realistic validation.",
+      "version": "0.1.11",
+      "author": {
+        "name": "rafabd1",
+        "email": "rbd.sye@gmail.com"
+      },
+      "homepage": "https://github.com/rafabd1/Proteus",
+      "repository": "https://github.com/rafabd1/Proteus",
+      "license": "GPL-3.0-or-later"
+    }
+  ]
+}
