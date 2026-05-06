@@ -299,6 +299,43 @@ delegation.
 If the host has no subagent facility, use the contracts as local execution
 checklists.
 
+## Packaged Templates
+
+Use the packaged templates when creating structured handoff files, report
+drafts, labs, or exports outside the CLI-generated defaults. Templates must be
+resolved from the Proteus plugin/package location, never from the target
+workspace.
+
+Template filenames:
+
+```text
+research-contract.md
+round-plan.md
+candidate-register.md
+report-draft.md
+```
+
+Resolve templates in this order:
+
+```text
+1. From this skill file:
+   <SKILL.md directory>/../../templates/<template>.md
+
+2. From the host-exposed Proteus plugin root, when available:
+   <proteus plugin root>/templates/<template>.md
+
+3. From an installed Codex plugin cache:
+   $CODEX_HOME/plugins/cache/proteus-marketplace/proteus/*/templates/<template>.md
+   or ~/.codex/plugins/cache/proteus-marketplace/proteus/*/templates/<template>.md
+
+4. In Claude Code, use the installed Proteus plugin package root if the host
+   exposes it. Otherwise, follow the report and memory structure described in
+   this skill.
+```
+
+If a packaged template is unavailable, recreate the same section structure from
+this skill instead of inventing a new format.
+
 ## Lab Rules
 
 Allowed:

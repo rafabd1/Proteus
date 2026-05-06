@@ -57,7 +57,7 @@ proteus --version
 Expected:
 
 ```text
-@rafabd1/proteus 0.1.15
+@rafabd1/proteus 0.1.16
 ```
 
 The codeload tarball is the recommended install path while Proteus is distributed
@@ -127,6 +127,8 @@ Code loads the same files as plugin subagents.
 If the package path is not directly exposed, coordinators should resolve
 contracts from the installed plugin package/cache, never from the target
 workspace.
+The same package/cache resolution applies to templates in
+`plugins/proteus/templates/*.md`.
 
 ### CLI Runtime
 
