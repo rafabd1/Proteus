@@ -57,7 +57,7 @@ proteus --version
 Expected:
 
 ```text
-@rafabd1/proteus 0.1.12
+@rafabd1/proteus 0.1.13
 ```
 
 The codeload tarball is the recommended install path while Proteus is distributed
@@ -129,7 +129,9 @@ long-running objectives and subagents for bounded fronts such as Argus, Loom,
 Chaos, Libris, Mimic, Artificer, and Skeptic. The coordinator still owns
 strategy, memory, dedupe, validation gates, and final kill/promote decisions.
 Codex can use the packaged role contracts in `plugins/proteus/agents/*.md` when
-spawning subagents; Claude Code loads the same files as plugin subagents.
+spawning subagents by reading the contract and inlining it into the delegated
+prompt. These paths are plugin-package paths, not target-workspace paths. Claude
+Code loads the same files as plugin subagents.
 
 ### CLI Runtime
 

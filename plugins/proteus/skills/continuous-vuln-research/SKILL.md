@@ -252,8 +252,8 @@ technical evidence exists. A candidate cannot become report-grade until Skeptic
 and Libris have both produced recorded outputs for the pre-claim review.
 
 When the host supports subagents or parallel delegated work, use the packaged
-role contracts under `../../agents/` as the source of truth for the delegated
-fronts:
+role contracts as the source of truth for delegated fronts. These are
+plugin-relative paths from this `SKILL.md`, not paths in the target workspace:
 
 ```text
 ../../agents/proteus-argus.md
@@ -265,9 +265,17 @@ fronts:
 ../../agents/proteus-skeptic.md
 ```
 
-For Codex, read the relevant contract and pass its role requirements into the
-subagent prompt when spawning an available subagent. For Claude Code, these same
-files are plugin subagents and should appear in `/agents` after installation.
+For Codex, the coordinator should resolve the relevant contract from the skill's
+own plugin directory, read it locally, and inline the role requirements into the
+spawned subagent prompt together with the target-specific surface, files,
+objective, evidence, and kill criteria. Do not ask the spawned subagent to open
+these paths from the target workspace.
+
+For Claude Code, these same files are plugin subagents and should appear in
+`/agents` after installation. Even there, the coordinator should still provide
+the specific objective, target context, evidence, and stop criteria for each
+delegation.
+
 If the host has no subagent facility, use the contracts as local execution
 checklists.
 
