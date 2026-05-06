@@ -104,14 +104,6 @@ Then use:
 After the marketplace is installed, use Proteus from Codex with the plugin/skill
 entrypoint exposed by your host.
 
-Common forms:
-
-```text
-/proteus
-$proteus
-$proteus:continuous-vuln-research
-```
-
 Example prompts:
 
 ```text
@@ -415,16 +407,6 @@ coverage against temporary targets.
 - [Memory model](docs/MEMORY_MODEL.md)
 - [Development plan](docs/DEVELOPMENT_PLAN.md)
 
-## Status
-
-Proteus is early and intentionally conservative. The current release focuses on
-assistant integration contracts, local memory runtime, CLI workflow, MCP
-exposure, round planning, agent-output recording, anti-revisit state, and lab
-scaffolding.
-
-The next major improvements are richer planner scoring, stricter output
-validation, better public-known/advisory checks, and deeper host integration for
-parallel research campaigns.
 
 ## License
 
