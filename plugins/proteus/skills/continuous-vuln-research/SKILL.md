@@ -204,24 +204,6 @@ proteus learn add --category validation_pattern --scope "<scope>" --title "<titl
 proteus export --root <target-root>
 ```
 
-In Codex, the skill may be installed before the MCP tools are exposed. If the
-CLI is installed and the host allows MCP registration, the stable manual setup
-is:
-
-```bash
-codex mcp add proteus -- proteus-mcp
-```
-
-In Claude Code, use the same CLI runtime with a user-scoped MCP registration:
-
-```bash
-claude mcp add -s user proteus -- proteus-mcp
-```
-
-Do not register MCP with a relative cache path such as
-`./scripts/proteus-mcp.cjs` unless the host explicitly sets the plugin root as
-the server working directory.
-
 If the runtime is unavailable, keep files in the target workspace under
 `.vros/exports/` using the same schema names:
 
