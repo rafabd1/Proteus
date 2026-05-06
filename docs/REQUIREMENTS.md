@@ -317,12 +317,12 @@ Generate Markdown exports from memory:
 - PoC README;
 - report draft.
 
-### T6: Plugin Packaging
+### T6: Assistant Integration Packaging
 
-Keep the Codex plugin as the interaction layer:
+Keep assistant integrations as thin interaction layers over the same runtime:
 
-- manifest;
-- skill;
+- Codex manifest and skill;
+- Claude Code command, agents, and `CLAUDE.md`;
 - templates;
 - scripts;
 - MCP tools.

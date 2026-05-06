@@ -18,15 +18,14 @@ the target.
 Do not promote weak hypotheses, expected behavior, duplicate findings,
 integration-only problems, forced vulnerable configuration, or lab artifacts.
 
-## Codex Capability Usage
+## Host Capability Usage
 
-When the Codex session provides stronger orchestration capabilities, use them to
-make Proteus more efficient and less repetitive:
+When the host assistant session provides stronger orchestration capabilities,
+use them to make Proteus more efficient and less repetitive:
 
 - If the user explicitly requests continuous work, a persistent campaign, or
-  "do not stop until the plugin/research is finished", use `/goal` or the
-  available goal mechanism to bind the campaign objective, budget, and stop
-  conditions.
+  "do not stop until the plugin/research is finished", use the available goal or
+  campaign mechanism to bind the objective, budget, and stop conditions.
 - If subagents or parallel delegation are available and allowed by the session,
   use them for independent, bounded Proteus fronts instead of doing every front
   serially in the coordinator context.
@@ -34,13 +33,14 @@ make Proteus more efficient and less repetitive:
   Argus, Loom, Chaos, Libris, Mimic, Artificer, or Skeptic.
 - Keep the coordinator responsible for target strategy, memory updates, ROI
   selection, validation gates, kill/promote decisions, and replanning.
-- If `/goal`, subagents, MCP tools, or the CLI are unavailable, continue with
-  the same Proteus workflow locally and record the limitation in memory or the
-  round log.
+- If goal/campaign mode, subagents, MCP tools, or the CLI are unavailable,
+  continue with the same Proteus workflow locally and record the limitation in
+  memory or the round log.
 
-Do not use subagents for vague repo-wide review. Do not use `/goal` without a
-user-requested persistent objective. These capabilities improve orchestration;
-they do not weaken the evidence, validation, or anti-slop gates.
+Do not use subagents for vague repo-wide review. Do not use persistent
+goal/campaign mode without a user-requested persistent objective. These
+capabilities improve orchestration; they do not weaken the evidence,
+validation, or anti-slop gates.
 
 ## Coordinator Loop
 
@@ -78,7 +78,7 @@ Selected high-ROI surfaces:
 Skipped surfaces and why:
 Prior killed paths to avoid:
 Agent fronts:
-Codex capabilities to use:
+Host capabilities to use:
 Validation gates:
 Expected evidence:
 Stop conditions:
@@ -90,8 +90,8 @@ and kill criteria.
 
 When subagents are available, each item in `Agent fronts` must include the
 codename, exact surface, heuristic family, expected artifact, and kill criteria.
-When `/goal` is active, align `Stop conditions` and `Replan trigger` with the
-active goal so the campaign does not drift.
+When a persistent goal or campaign is active, align `Stop conditions` and
+`Replan trigger` with it so the campaign does not drift.
 
 ## Hypothesis Heuristics
 

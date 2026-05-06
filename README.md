@@ -1,7 +1,7 @@
 # Proteus
 
-Proteus is a Codex plugin and local runtime for structured, continuous
-vulnerability research against arbitrary codebases.
+Proteus is a local runtime and assistant integration suite for structured,
+continuous vulnerability research against arbitrary codebases.
 
 You give it a target repository. Proteus helps the coordinator map the codebase,
 select high-ROI security surfaces, generate non-obvious exploitability
@@ -30,7 +30,7 @@ negative controls, and PoC validation without artificial lab help.
   expected behavior, public-known issues, forced-vulnerable configs, and
   lab-created bugs.
 - CLI and MCP interfaces, so the same memory and planning operations work from
-  the terminal or through the Codex plugin.
+  the terminal, Codex, Claude Code, or other MCP-capable assistants.
 - Realistic PoC lab scaffolding with attacker model, documented/default config,
   negative controls, limitations, and evidence capture.
 - Triage-ready report draft guidance that favors natural language, concise root
@@ -38,7 +38,7 @@ negative controls, and PoC validation without artificial lab help.
 
 ## Install
 
-Proteus has two install surfaces:
+Proteus has three install surfaces:
 
 - CLI/runtime: `proteus` and `proteus-mcp`
 - Codex plugin: the `continuous-vuln-research` skill plus MCP configuration
@@ -92,6 +92,18 @@ Proteus ships project-level Claude Code integration:
 CLAUDE.md
 ```
 
+Direct user-level install from a fresh checkout:
+
+```powershell
+git clone https://github.com/rafabd1/Proteus
+cd Proteus
+npm install -g https://codeload.github.com/rafabd1/Proteus/tar.gz/refs/heads/main
+New-Item -ItemType Directory -Force ~/.claude/commands, ~/.claude/agents
+Copy-Item .claude/commands/proteus.md ~/.claude/commands/proteus.md -Force
+Copy-Item .claude/agents/proteus-*.md ~/.claude/agents/ -Force
+claude mcp add proteus --scope user -- proteus-mcp
+```
+
 From a Claude Code session in the repository, use:
 
 ```text
@@ -115,8 +127,8 @@ proteus-skeptic
 
 Use `/mcp` inside Claude Code to approve or inspect the project MCP server.
 
-For user-level use across many Claude Code projects, install the CLI and then
-copy the command/agents into your Claude Code home:
+For user-level use across many Claude Code projects from an existing Proteus
+checkout, copy the command/agents into your Claude Code home:
 
 ```powershell
 New-Item -ItemType Directory -Force ~/.claude/commands, ~/.claude/agents
@@ -150,10 +162,10 @@ Example prompts:
 /proteus validate this candidate with realistic PoC gates, negative controls, and no forced vulnerable config.
 ```
 
-When available, Proteus should use Codex `/goal` for persistent campaigns and
-subagents for bounded fronts such as Argus, Loom, Chaos, Libris, Mimic,
-Artificer, and Skeptic. The coordinator still owns strategy, memory, dedupe,
-validation gates, and final kill/promote decisions.
+When available, Proteus should use persistent goal/campaign features for
+long-running objectives and subagents for bounded fronts such as Argus, Loom,
+Chaos, Libris, Mimic, Artificer, and Skeptic. The coordinator still owns
+strategy, memory, dedupe, validation gates, and final kill/promote decisions.
 
 ### CLI Runtime
 
@@ -218,11 +230,12 @@ coordinator:
   - replans from what was learned instead of restarting from scratch
 ```
 
-When Codex provides `/goal`, subagents, or parallel delegation, Proteus expects
-the coordinator to use those capabilities for efficiency:
+When the host assistant provides persistent goals, subagents, or parallel
+delegation, Proteus expects the coordinator to use those capabilities for
+efficiency:
 
-- `/goal` is useful for user-requested continuous campaigns or persistent
-  objectives with explicit stop conditions.
+- Goal or campaign mode is useful for user-requested continuous campaigns or
+  persistent objectives with explicit stop conditions.
 - Subagents are useful for independent bounded fronts, not vague repo-wide
   review.
 - The coordinator remains responsible for strategy, memory, validation gates,
@@ -308,10 +321,16 @@ proteus learn export [--out <path>]
 
 ## MCP Tools
 
-The plugin starts the MCP server through:
+Codex starts the plugin MCP server through:
 
 ```text
 plugins/proteus/.mcp.json
+```
+
+Claude Code can use the project MCP server through:
+
+```text
+.mcp.json
 ```
 
 The server exposes:
@@ -343,7 +362,7 @@ proteus-mcp
 ## Architecture
 
 ```text
-Codex skill
+Assistant integration
   - operational contract for continuous vulnerability research
   - defines coordinator loop, validation gates, role usage, and output verdicts
 
@@ -429,8 +448,9 @@ coverage against temporary targets.
 ## Status
 
 Proteus is early and intentionally conservative. The current release focuses on
-the Codex plugin contract, local memory runtime, CLI workflow, MCP exposure,
-round planning, agent-output recording, anti-revisit state, and lab scaffolding.
+assistant integration contracts, local memory runtime, CLI workflow, MCP
+exposure, round planning, agent-output recording, anti-revisit state, and lab
+scaffolding.
 
 The next major improvements are richer planner scoring, stricter output
 validation, better public-known/advisory checks, and deeper host integration for

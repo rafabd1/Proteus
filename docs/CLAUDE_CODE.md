@@ -29,7 +29,20 @@ You can verify MCP visibility inside Claude Code with:
 ## User-Level Install
 
 To make `/proteus` and the Proteus subagents available across many Claude Code
-projects, copy the command and agents into your Claude Code user directory:
+projects, install from a fresh checkout:
+
+```powershell
+git clone https://github.com/rafabd1/Proteus
+cd Proteus
+npm install -g https://codeload.github.com/rafabd1/Proteus/tar.gz/refs/heads/main
+New-Item -ItemType Directory -Force ~/.claude/commands, ~/.claude/agents
+Copy-Item .claude/commands/proteus.md ~/.claude/commands/proteus.md -Force
+Copy-Item .claude/agents/proteus-*.md ~/.claude/agents/ -Force
+claude mcp add proteus --scope user -- proteus-mcp
+```
+
+If you already have a Proteus checkout and the CLI is already installed, only
+copy the command and agents:
 
 ```powershell
 New-Item -ItemType Directory -Force ~/.claude/commands, ~/.claude/agents
@@ -37,7 +50,7 @@ Copy-Item .claude/commands/proteus.md ~/.claude/commands/proteus.md -Force
 Copy-Item .claude/agents/proteus-*.md ~/.claude/agents/ -Force
 ```
 
-Then register the global Proteus MCP server:
+Then register or refresh the user-level Proteus MCP server:
 
 ```powershell
 claude mcp add proteus --scope user -- proteus-mcp

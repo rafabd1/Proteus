@@ -6,8 +6,8 @@ Proteus is composed of five layers:
 
 ```mermaid
 flowchart TD
-  User["Researcher / Codex user"]
-  Plugin["Proteus Codex plugin"]
+  User["Researcher / assistant user"]
+  Plugin["Proteus assistant integration"]
   Coordinator["Coordinator runtime"]
   Memory["Structured memory store"]
   Tools["Tool orchestration layer"]
@@ -24,15 +24,16 @@ flowchart TD
   Coordinator --> Export
 ```
 
-The Codex plugin provides the agent instructions and interaction surface. The
-coordinator runtime turns the research framework into a repeatable process. The
+The assistant integration layer provides the agent instructions and interaction
+surface for Codex, Claude Code, and MCP-capable hosts. The coordinator runtime
+turns the research framework into a repeatable process. The
 memory store preserves learned state. The tool layer instruments the target
 environment. The lab layer validates candidates. Exports turn structured state
 into readable Markdown and reports.
 
 ## 2. Core Components
 
-### Plugin Interface
+### Assistant Integration Interface
 
 Responsibilities:
 
@@ -44,11 +45,12 @@ Responsibilities:
 
 Implementation:
 
-- Codex plugin manifest;
+- Codex plugin manifest and skill;
+- Claude Code slash command, subagents, and `CLAUDE.md`;
 - `SKILL.md`;
 - Markdown templates;
 - PowerShell and POSIX wrappers under `plugins/proteus/scripts`;
-- MCP configuration under `plugins/proteus/.mcp.json`.
+- MCP configuration under `plugins/proteus/.mcp.json` and root `.mcp.json`.
 
 ### Coordinator Runtime
 
@@ -326,12 +328,12 @@ vros export markdown
 vros lab create <candidate-id>
 ```
 
-## 8. Integration With Codex
+## 8. Integration With Assistant Hosts
 
-The Codex skill should instruct the agent to:
+The assistant integration should instruct the agent to:
 
-- use `/goal` for user-requested continuous campaigns or persistent objectives
-  when the capability is available;
+- use goal or campaign mechanisms for user-requested continuous campaigns or
+  persistent objectives when the capability is available;
 - use available subagents for parallel, independent Proteus fronts when the
   session allows delegation;
 - initialize or load target memory;
@@ -349,7 +351,7 @@ subagents may explore bounded fronts, but they do not promote findings directly.
 Goal mode may keep a campaign alive across long work, but stop conditions,
 replan triggers, and validation gates still come from Proteus memory.
 
-The plugin exposes memory commands as MCP tools through `dist/mcp.js`, while the
+Proteus exposes memory commands as MCP tools through `dist/mcp.js`, while the
 CLI remains available for terminal-first workflows and smoke testing.
 
 ## 9. Security and Reliability Notes

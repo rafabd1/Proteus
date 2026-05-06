@@ -1,7 +1,7 @@
 {
   "name": "@rafabd1/proteus",
   "version": "0.1.10",
-  "description": "Structured, continuous vulnerability research runtime and Codex plugin.",
+  "description": "Structured, continuous vulnerability research runtime and assistant integration suite.",
   "type": "commonjs",
   "bin": {
     "proteus": "./dist/cli.js",
@@ -19,7 +19,8 @@
     "vulnerability-research",
     "bug-bounty",
     "offensive-security",
-    "codex-plugin"
+    "codex-plugin",
+    "claude-code"
   ],
   "license": "GPL-3.0-or-later",
   "dependencies": {},

@@ -2,7 +2,7 @@
 
 ## 1. Vision
 
-Proteus is a Codex plugin and local runtime for continuous,
+Proteus is a local runtime and assistant integration suite for continuous,
 professional-grade vulnerability research against arbitrary codebases.
 
 It should help an agent behave like a serious offensive researcher:
@@ -412,7 +412,7 @@ Every PoC must include:
 
 Recommended architecture:
 
-- Plugin manifest and skills for Codex integration.
+- Thin assistant integrations for Codex, Claude Code, and MCP-capable hosts.
 - TypeScript for the coordinator runtime and CLI once implementation begins.
 - SQLite for local structured memory.
 - Zod or equivalent schema validation for all memory records and agent outputs.
@@ -425,7 +425,7 @@ Recommended architecture:
 
 Why TypeScript first:
 
-- strong fit for Codex plugin/MCP tooling;
+- strong fit for CLI, MCP, Codex, and Claude Code integration;
 - easy JSON schema handling;
 - good process orchestration;
 - portable across Windows, Linux, WSL, and CI;
