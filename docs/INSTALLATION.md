@@ -16,7 +16,7 @@ proteus --version
 Expected shape:
 
 ```text
-@rafabd1/proteus 0.1.16
+@rafabd1/proteus 0.1.17
 ```
 
 The GitHub tarball install uses the committed `dist/` runtime and has no
@@ -85,6 +85,13 @@ It exposes the plugin at:
 plugins/proteus
 ```
 
+If Codex does not expose the Proteus MCP tools after the plugin is installed,
+register the MCP server manually from the CLI install:
+
+```powershell
+codex mcp add proteus -- proteus-mcp
+```
+
 ## Claude Code Plugin Install
 
 Install directly inside Claude Code:
@@ -110,9 +117,10 @@ proteus --help
 proteus-mcp
 ```
 
-For normal plugin use, Codex starts the MCP server through
-`plugins/proteus/.mcp.json`. The wrapper builds the runtime if `dist/` is not
-present yet.
+For plugin hosts that support plugin-declared MCP servers, Proteus exposes
+`plugins/proteus/.mcp.json`. If the tools do not appear in Codex, use
+`codex mcp add proteus -- proteus-mcp`. The wrapper builds the runtime if
+`dist/` is not present yet.
 
 ## Uninstall CLI
 

@@ -57,7 +57,7 @@ proteus --version
 Expected:
 
 ```text
-@rafabd1/proteus 0.1.16
+@rafabd1/proteus 0.1.17
 ```
 
 The codeload tarball is the recommended install path while Proteus is distributed
@@ -72,6 +72,13 @@ codex plugin marketplace add rafabd1/Proteus
 
 Then install or enable the `proteus` plugin from Codex's plugin UI if your host
 does not install marketplace defaults automatically.
+
+If Codex does not expose the Proteus MCP tools after installing the plugin,
+register the MCP server manually from the CLI install:
+
+```powershell
+codex mcp add proteus -- proteus-mcp
+```
 
 ### 3. Add The Claude Code Plugin
 
@@ -269,13 +276,13 @@ proteus learn export [--out <path>]
 
 ## MCP Tools
 
-Codex starts the plugin MCP server through:
+Codex can use the MCP server through a manual global MCP registration:
 
-```text
-plugins/proteus/.mcp.json
+```powershell
+codex mcp add proteus -- proteus-mcp
 ```
 
-Claude Code loads the plugin MCP server through:
+Plugin hosts that support plugin-declared MCP servers can also start it through:
 
 ```text
 plugins/proteus/.mcp.json
