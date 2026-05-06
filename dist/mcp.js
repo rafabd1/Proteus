@@ -22,6 +22,7 @@ const tools = [
         handler: ({ root, name }) => withDb(str(root), (db) => {
             const contract = (0, db_1.createDefaultContract)(db.targetRoot, maybeStr(name));
             db.initTarget(contract);
+            (0, planner_1.ensureInitialSurfaces)(db);
             return { ok: true, target: contract.target, root: db.targetRoot };
         })
     },
@@ -53,15 +54,38 @@ const tools = [
         title: "Observe Target",
         description: "Inspect local target environment and store a profile as evidence.",
         inputSchema: schema({ root: stringProp("Target root path.") }, ["root"]),
-        handler: ({ root }) => withDb(str(root), (db) => (0, observe_1.observeTarget)(db))
+        handler: ({ root }) => withDb(str(root), (db) => {
+            (0, planner_1.ensureInitialSurfaces)(db);
+            return (0, observe_1.observeTarget)(db);
+        })
     },
     {
         name: "proteus_plan_round",
         title: "Plan Research Round",
-        description: "Create a high-ROI Proteus research round with selected surfaces and agent fronts.",
-        inputSchema: schema({ root: stringProp("Target root path."), objective: stringProp("Round objective."), markdown: booleanProp("Return Markdown instead of JSON.") }, ["root", "objective"]),
-        handler: ({ root, objective, markdown }) => withDb(str(root), (db) => {
-            const plan = (0, planner_1.planRound)(db, str(objective));
+        description: "Create an empty Proteus research-round scaffold or record a coordinator-authored plan. It does not choose targets, rank surfaces, or generate strategic understanding.",
+        inputSchema: schema({
+            root: stringProp("Target root path."),
+            objective: stringProp("Round objective."),
+            coordinatorPlan: objectProp("Primary input: coordinator-authored plan to persist and render."),
+            currentUnderstanding: stringProp("Coordinator-supplied target understanding."),
+            selectedSurfaces: objectArrayProp("Coordinator-selected high-ROI surfaces."),
+            skippedSurfaces: objectArrayProp("Coordinator-supplied skipped surfaces or non-goals."),
+            agentFronts: objectArrayProp("Coordinator-supplied bounded agent fronts."),
+            stopConditions: arrayProp("Coordinator-supplied stop conditions."),
+            replanTrigger: stringProp("Coordinator-supplied replan trigger."),
+            markdown: booleanProp("Return Markdown instead of JSON.")
+        }, ["root", "objective"]),
+        handler: ({ root, objective, coordinatorPlan, currentUnderstanding, selectedSurfaces, skippedSurfaces, agentFronts, stopConditions, replanTrigger, markdown }) => withDb(str(root), (db) => {
+            const plan = (0, planner_1.planRound)(db, {
+                objective: str(objective),
+                coordinatorPlan: objectValue(coordinatorPlan),
+                currentUnderstanding: maybeStr(currentUnderstanding),
+                selectedSurfaces: objectArray(selectedSurfaces),
+                skippedSurfaces: objectArray(skippedSurfaces),
+                agentFronts: objectArray(agentFronts),
+                stopConditions: Array.isArray(stopConditions) ? stringArray(stopConditions) : undefined,
+                replanTrigger: maybeStr(replanTrigger)
+            });
             return markdown === true ? (0, planner_1.renderRoundPlan)(plan) : plan;
         })
     },
@@ -290,7 +314,7 @@ function handleLine(line) {
             sendResult(request.id, {
                 protocolVersion: "2025-06-18",
                 capabilities: { tools: {} },
-                serverInfo: { name: "proteus", version: "0.1.19" }
+                serverInfo: { name: "proteus", version: "0.1.20" }
             });
             return;
         }
@@ -377,6 +401,12 @@ function booleanProp(description) {
 function arrayProp(description) {
     return { type: "array", items: { type: "string" }, ...(description ? { description } : {}) };
 }
+function objectArrayProp(description) {
+    return { type: "array", items: { type: "object", additionalProperties: true }, ...(description ? { description } : {}) };
+}
+function objectProp(description) {
+    return { type: "object", additionalProperties: true, ...(description ? { description } : {}) };
+}
 function str(value) {
     if (typeof value !== "string" || value.length === 0)
         throw new Error("Expected non-empty string");
@@ -396,4 +426,10 @@ function stringArray(value) {
 }
 function numberArray(value) {
     return Array.isArray(value) ? value.filter((item) => typeof item === "number" && Number.isFinite(item)) : [];
+}
+function objectArray(value) {
+    return Array.isArray(value) ? value.filter((item) => typeof item === "object" && item !== null && !Array.isArray(item)) : undefined;
+}
+function objectValue(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value) ? value : undefined;
 }

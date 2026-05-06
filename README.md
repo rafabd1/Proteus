@@ -61,7 +61,7 @@ proteus --version
 Expected:
 
 ```text
-@rafabd1/proteus 0.1.19
+@rafabd1/proteus 0.1.20
 ```
 
 The codeload tarball is the recommended install path while Proteus is distributed
@@ -156,8 +156,14 @@ proteus observe --root C:\path\to\target
 Plan a focused research round:
 
 ```powershell
-proteus plan-round --root C:\path\to\target --objective "Find high-ROI auth, state, cache, and adapter divergence candidates" --write
+proteus plan-round --root C:\path\to\target --objective "Find high-ROI daemon, archive, indexer, and storage candidates" --plan-json round-input.json --write
 ```
+
+`plan-round` is a structured recorder and scaffold, not an autonomous target
+selection oracle. For serious targets, pass coordinator-supplied surfaces and
+fronts through `--plan-json` or the MCP `proteus_plan_round` structured fields.
+Query global learnings separately, review them in the coordinator context, and
+manually include only relevant conclusions in the supplied plan.
 
 Export human-readable state:
 
@@ -266,7 +272,7 @@ proteus init [--root <path>] [--name <target>]
 proteus status [--root <path>]
 proteus ingest [--root <path>] [paths...]
 proteus observe [--root <path>]
-proteus plan-round [--root <path>] [--objective <text>] [--write]
+proteus plan-round [--root <path>] [--objective <text>] [--context <text>] [--plan-json <path>] [--write]
 proteus roles
 proteus prompt --role <argus|loom|chaos|libris|mimic|artificer|skeptic> --surface <text>
 proteus record hypothesis --title <text> [--surface-id <id>] [--impact <text>]

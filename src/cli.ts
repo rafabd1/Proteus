@@ -91,6 +91,7 @@ function cmdInit(db: ProteusDb, parsed: ParsedArgs): void {
   const name = getString(parsed, "name");
   const contract = createDefaultContract(db.targetRoot, name);
   db.initTarget(contract);
+  ensureInitialSurfaces(db);
   ensureDir(exportsDir(db.targetRoot));
   console.log(`Initialized Proteus target: ${contract.target}`);
   console.log(`Memory: ${path.join(db.targetRoot, ".vros", "memory.sqlite")}`);
@@ -121,6 +122,7 @@ function cmdIngest(db: ProteusDb, inputs: string[]): void {
 
 function cmdObserve(db: ProteusDb): void {
   requireInitialized(db);
+  ensureInitialSurfaces(db);
   const profile = observeTarget(db);
   console.log(JSON.stringify(profile, null, 2));
 }
@@ -130,7 +132,14 @@ function cmdPlanRound(db: ProteusDb, parsed: ParsedArgs): void {
   const objective =
     getString(parsed, "objective") ??
     "Identify high-ROI, non-obvious vulnerability hypotheses with realistic exploitability.";
-  const plan = planRound(db, objective);
+  const planInputPath = getString(parsed, "plan-json");
+  const planInput = planInputPath
+    ? { objective, coordinatorPlan: readPlanInput(planInputPath) }
+    : {
+        objective,
+        currentUnderstanding: getString(parsed, "context")
+      };
+  const plan = planRound(db, planInput);
   const markdown = renderRoundPlan(plan);
   if (getBoolean(parsed, "write")) {
     const out = path.join(exportsDir(db.targetRoot), `round-plan-${Date.now()}.md`);
@@ -140,6 +149,11 @@ function cmdPlanRound(db: ProteusDb, parsed: ParsedArgs): void {
   } else {
     console.log(markdown);
   }
+}
+
+function readPlanInput(filePath: string): Record<string, unknown> {
+  const fullPath = path.resolve(filePath);
+  return JSON.parse(fs.readFileSync(fullPath, "utf8")) as Record<string, unknown>;
 }
 
 function cmdRoles(): void {
@@ -430,7 +444,7 @@ Usage:
   proteus status [--root <path>]
   proteus ingest [--root <path>] [paths...]
   proteus observe [--root <path>]
-  proteus plan-round [--root <path>] [--objective <text>] [--write]
+  proteus plan-round [--root <path>] [--objective <text>] [--context <text>] [--plan-json <path>] [--write]
   proteus roles
   proteus prompt --role <argus|loom|chaos|libris|mimic|artificer|skeptic> --surface <text>
   proteus record hypothesis --title <text> [--surface-id <id>] [--impact <text>]

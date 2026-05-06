@@ -4,7 +4,7 @@ import { ProteusDb, createDefaultContract } from "./db";
 import { ingestPaths } from "./ingest";
 import { defaultGlobalScopeFromTarget, GlobalMemoryDb } from "./global-memory";
 import { observeTarget } from "./observe";
-import { planRound, renderRoundPlan } from "./planner";
+import { ensureInitialSurfaces, planRound, renderRoundPlan } from "./planner";
 import { exportMarkdown } from "./exporter";
 import { createLab } from "./lab";
 import { resolveTargetRoot } from "./paths";
@@ -37,6 +37,7 @@ const tools: ToolDefinition[] = [
       withDb(str(root), (db) => {
         const contract = createDefaultContract(db.targetRoot, maybeStr(name));
         db.initTarget(contract);
+        ensureInitialSurfaces(db);
         return { ok: true, target: contract.target, root: db.targetRoot };
       })
   },
@@ -69,19 +70,44 @@ const tools: ToolDefinition[] = [
     title: "Observe Target",
     description: "Inspect local target environment and store a profile as evidence.",
     inputSchema: schema({ root: stringProp("Target root path.") }, ["root"]),
-    handler: ({ root }) => withDb(str(root), (db) => observeTarget(db))
+    handler: ({ root }) =>
+      withDb(str(root), (db) => {
+        ensureInitialSurfaces(db);
+        return observeTarget(db);
+      })
   },
   {
     name: "proteus_plan_round",
     title: "Plan Research Round",
-    description: "Create a high-ROI Proteus research round with selected surfaces and agent fronts.",
+    description:
+      "Create an empty Proteus research-round scaffold or record a coordinator-authored plan. It does not choose targets, rank surfaces, or generate strategic understanding.",
     inputSchema: schema(
-      { root: stringProp("Target root path."), objective: stringProp("Round objective."), markdown: booleanProp("Return Markdown instead of JSON.") },
+      {
+        root: stringProp("Target root path."),
+        objective: stringProp("Round objective."),
+        coordinatorPlan: objectProp("Primary input: coordinator-authored plan to persist and render."),
+        currentUnderstanding: stringProp("Coordinator-supplied target understanding."),
+        selectedSurfaces: objectArrayProp("Coordinator-selected high-ROI surfaces."),
+        skippedSurfaces: objectArrayProp("Coordinator-supplied skipped surfaces or non-goals."),
+        agentFronts: objectArrayProp("Coordinator-supplied bounded agent fronts."),
+        stopConditions: arrayProp("Coordinator-supplied stop conditions."),
+        replanTrigger: stringProp("Coordinator-supplied replan trigger."),
+        markdown: booleanProp("Return Markdown instead of JSON.")
+      },
       ["root", "objective"]
     ),
-    handler: ({ root, objective, markdown }) =>
+    handler: ({ root, objective, coordinatorPlan, currentUnderstanding, selectedSurfaces, skippedSurfaces, agentFronts, stopConditions, replanTrigger, markdown }) =>
       withDb(str(root), (db) => {
-        const plan = planRound(db, str(objective));
+        const plan = planRound(db, {
+          objective: str(objective),
+          coordinatorPlan: objectValue(coordinatorPlan) as never,
+          currentUnderstanding: maybeStr(currentUnderstanding),
+          selectedSurfaces: objectArray(selectedSurfaces) as never,
+          skippedSurfaces: objectArray(skippedSurfaces) as never,
+          agentFronts: objectArray(agentFronts) as never,
+          stopConditions: Array.isArray(stopConditions) ? stringArray(stopConditions) : undefined,
+          replanTrigger: maybeStr(replanTrigger)
+        });
         return markdown === true ? renderRoundPlan(plan) : plan;
       })
   },
@@ -337,7 +363,7 @@ function handleLine(line: string): void {
       sendResult(request.id, {
         protocolVersion: "2025-06-18",
         capabilities: { tools: {} },
-        serverInfo: { name: "proteus", version: "0.1.19" }
+        serverInfo: { name: "proteus", version: "0.1.20" }
       });
       return;
     }
@@ -432,6 +458,14 @@ function arrayProp(description?: string): JsonObject {
   return { type: "array", items: { type: "string" }, ...(description ? { description } : {}) };
 }
 
+function objectArrayProp(description?: string): JsonObject {
+  return { type: "array", items: { type: "object", additionalProperties: true }, ...(description ? { description } : {}) };
+}
+
+function objectProp(description?: string): JsonObject {
+  return { type: "object", additionalProperties: true, ...(description ? { description } : {}) };
+}
+
 function str(value: unknown): string {
   if (typeof value !== "string" || value.length === 0) throw new Error("Expected non-empty string");
   return value;
@@ -455,4 +489,12 @@ function stringArray(value: unknown): string[] {
 
 function numberArray(value: unknown): number[] {
   return Array.isArray(value) ? value.filter((item): item is number => typeof item === "number" && Number.isFinite(item)) : [];
+}
+
+function objectArray(value: unknown): Record<string, unknown>[] | undefined {
+  return Array.isArray(value) ? value.filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null && !Array.isArray(item)) : undefined;
+}
+
+function objectValue(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
 }

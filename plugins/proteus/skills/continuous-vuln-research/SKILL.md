@@ -1,6 +1,6 @@
 ---
 name: continuous-vuln-research
-description: Run disciplined, continuous, professional vulnerability research against a codebase using structured memory, ROI-based surface planning, multi-agent heuristics, realistic validation, and anti-slop report gates.
+description: Run disciplined, continuous, professional vulnerability research against a codebase using structured memory, coordinator-authored round planning, multi-agent heuristics, realistic validation, and anti-slop report gates.
 ---
 
 # Proteus Continuous Vulnerability Research
@@ -92,6 +92,19 @@ When subagents are available, each item in `Agent fronts` must include the
 codename, exact surface, heuristic family, expected artifact, and kill criteria.
 When a persistent goal or campaign is active, align `Stop conditions` and
 `Replan trigger` with it so the campaign does not drift.
+
+Do not treat `proteus_plan_round` or `proteus plan-round` as an autonomous
+target-selection oracle. It is a formatter and memory recorder for a
+coordinator-authored plan, or an empty scaffold when the plan has not been
+written yet. For non-trivial targets, supply target-specific
+`currentUnderstanding`, `selectedSurfaces`, `skippedSurfaces`, `agentFronts`,
+`stopConditions`, and `replanTrigger` from the coordinator's analysis.
+
+Do not ask Proteus runtime commands to generate rational security knowledge.
+Use them to initialize, ingest, observe factual environment data, query memory,
+record evidence, and render explicitly supplied planning content. Query global
+learnings separately, review them in the coordinator context, and manually fold
+only relevant items into the round plan.
 
 ## Hypothesis Heuristics
 
@@ -193,7 +206,7 @@ Preferred command flow:
 proteus init --root <target-root> --name <target>
 proteus ingest --root <target-root> findings REPORTS reports docs
 proteus observe --root <target-root>
-proteus plan-round --root <target-root> --objective "<objective>" --write
+proteus plan-round --root <target-root> --objective "<objective>" --plan-json round-input.json --write
 proteus query duplicates --root <target-root> "<candidate text>"
 proteus record hypothesis --root <target-root> --title "<title>" --impact "<impact>"
 proteus record agent-output --root <target-root> --round-id <id> --role argus --surface "<surface>"

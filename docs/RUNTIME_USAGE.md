@@ -81,12 +81,18 @@ Observation records:
 ## Plan A Research Round
 
 ```powershell
-node dist/cli.js plan-round --root C:\path\to\target --objective "Find high-ROI auth/cache/state confusion candidates" --write
+node dist/cli.js plan-round --root C:\path\to\target --objective "Find high-ROI daemon, archive, indexer, and storage candidates" --plan-json round-input.json --write
 ```
 
-The planner creates initial surface families when no surfaces exist, scores them
-with ROI factors, selects bounded fronts, assigns Proteus roles, records the
-round in memory, and optionally writes a Markdown plan.
+`plan-round` is a structured recorder and scaffold, not an autonomous
+target-selection oracle. For serious targets, pass coordinator-supplied surfaces
+and fronts through `--plan-json` or the MCP `proteus_plan_round` structured
+fields. Query global learnings separately, review them in the coordinator
+context, and manually include only relevant conclusions in the supplied plan.
+
+The command records the round in memory and optionally writes a Markdown plan.
+It does not select targets, rank surfaces, assign fronts, or generate strategic
+understanding by itself.
 
 ## Generate Agent Prompts
 

@@ -1,6 +1,5 @@
 import path from "node:path";
 import { ProteusDb } from "./db";
-import { defaultGlobalScopeFromTarget, GlobalMemoryDb } from "./global-memory";
 import { discoverFiles } from "./observe";
 import { ROLES } from "./roles";
 import type { AgentCodename, JsonValue, RoiFactors, SurfaceInput } from "./types";
@@ -92,6 +91,7 @@ const SURFACE_FAMILIES: SurfaceFamily[] = [
 
 export interface RoundPlan {
   objective: string;
+  planningMode: "coordinator_supplied" | "scaffold";
   currentUnderstanding: string;
   selectedSurfaces: PlannedSurface[];
   skippedSurfaces: PlannedSurface[];
@@ -99,14 +99,43 @@ export interface RoundPlan {
   validationGates: string[];
   stopConditions: string[];
   replanTrigger: string;
-  globalLearnings: PlannedGlobalLearning[];
 }
 
-export interface PlannedGlobalLearning {
-  id: number;
-  category: string;
-  title: string;
-  scope: string;
+export interface PlanRoundInput {
+  objective: string;
+  coordinatorPlan?: CoordinatorPlanInput;
+  currentUnderstanding?: string;
+  selectedSurfaces?: CoordinatorSurfaceInput[];
+  skippedSurfaces?: CoordinatorSurfaceInput[];
+  agentFronts?: CoordinatorAgentFrontInput[];
+  stopConditions?: string[];
+  replanTrigger?: string;
+}
+
+export interface CoordinatorSurfaceInput {
+  id?: number;
+  name: string;
+  family?: string;
+  roiScore?: number;
+  reason?: string;
+  files?: string[];
+  revisitCondition?: string;
+}
+
+export interface CoordinatorAgentFrontInput {
+  codename: AgentCodename;
+  assignedSurfaceIds?: number[];
+  purpose?: string;
+  requiredOutput?: string[];
+}
+
+export interface CoordinatorPlanInput {
+  currentUnderstanding?: string;
+  selectedSurfaces?: CoordinatorSurfaceInput[];
+  skippedSurfaces?: CoordinatorSurfaceInput[];
+  agentFronts?: CoordinatorAgentFrontInput[];
+  stopConditions?: string[];
+  replanTrigger?: string;
 }
 
 export interface PlannedSurface {
@@ -155,44 +184,33 @@ export function ensureInitialSurfaces(db: ProteusDb): number {
   return created;
 }
 
-export function planRound(db: ProteusDb, objective: string): RoundPlan {
-  ensureInitialSurfaces(db);
-  const surfaces = db.listSurfaces();
-  const selected = surfaces
-    .filter((surface) => !["exhausted", "low_roi", "blocked"].includes(surface.status))
-    .slice(0, 4)
-    .map((surface) => ({
-      id: surface.id,
-      name: surface.name,
-      family: surface.family,
-      roiScore: surface.roiScore,
-      reason: selectionReason(surface.roiScore, surface.files.length, surface.status),
-      files: surface.files.slice(0, 20),
-      revisitCondition: surface.revisitCondition
-    }));
+export function planRound(db: ProteusDb, input: string | PlanRoundInput): RoundPlan {
+  const planInput = typeof input === "string" ? { objective: input } : input;
+  const objective = planInput.objective;
+  const coordinatorPlan = planInput.coordinatorPlan;
+  const selected =
+    (coordinatorPlan?.selectedSurfaces ?? planInput.selectedSurfaces)?.map((surface) => plannedSurfaceFromCoordinator(surface)) ??
+    [];
+  const skipped =
+    (coordinatorPlan?.skippedSurfaces ?? planInput.skippedSurfaces)?.map((surface) => plannedSurfaceFromCoordinator(surface)) ??
+    [];
 
-  const selectedIds = new Set(selected.map((surface) => surface.id));
-  const skipped = surfaces
-    .filter((surface) => !selectedIds.has(surface.id))
-    .slice(0, 12)
-    .map((surface) => ({
-      id: surface.id,
-      name: surface.name,
-      family: surface.family,
-      roiScore: surface.roiScore,
-      reason: skipReason(surface.status, surface.roiScore),
-      files: surface.files.slice(0, 10),
-      revisitCondition: surface.revisitCondition
-    }));
-
-  const agentFronts = buildAgentFronts(selected);
-  const globalLearnings = loadGlobalLearnings(db, objective);
+  const agentFronts =
+    (coordinatorPlan?.agentFronts ?? planInput.agentFronts)?.map((front) => agentFrontFromCoordinator(front)) ??
+    [];
+  const hasCoordinatorInput = Boolean(
+    coordinatorPlan ??
+      planInput.currentUnderstanding ??
+      planInput.selectedSurfaces ??
+      planInput.skippedSurfaces ??
+      planInput.agentFronts ??
+      planInput.stopConditions ??
+      planInput.replanTrigger
+  );
   const plan: RoundPlan = {
     objective,
-    currentUnderstanding:
-      globalLearnings.length > 0
-        ? "Initial round plan derived from target profile, attack-surface families, prior memory state, global learnings, and anti-revisit rules."
-        : "Initial round plan derived from target profile, attack-surface families, prior memory state, and anti-revisit rules.",
+    planningMode: hasCoordinatorInput ? "coordinator_supplied" : "scaffold",
+    currentUnderstanding: coordinatorPlan?.currentUnderstanding ?? planInput.currentUnderstanding ?? "",
     selectedSurfaces: selected,
     skippedSurfaces: skipped,
     agentFronts,
@@ -209,15 +227,13 @@ export function planRound(db: ProteusDb, objective: string): RoundPlan {
       "G10 old/obvious classes have exceptional impact or are killed",
       "G11 PoC does not depend on artificial lab help"
     ],
-    stopConditions: [
-      "report-grade candidate needs user decision",
-      "selected surfaces are exhausted under assigned heuristics",
-      "external blocker requires credentials or infrastructure",
-      "all surviving hypotheses fail validation gates"
-    ],
-    replanTrigger:
-      "After every agent front returns, integrate killed paths and evidence, update ROI, and select the next highest marginal-value surfaces.",
-    globalLearnings
+    stopConditions:
+      coordinatorPlan?.stopConditions && coordinatorPlan.stopConditions.length > 0
+        ? coordinatorPlan.stopConditions
+        : planInput.stopConditions && planInput.stopConditions.length > 0
+          ? planInput.stopConditions
+        : [],
+    replanTrigger: coordinatorPlan?.replanTrigger ?? planInput.replanTrigger ?? ""
   };
 
   db.addRound({
@@ -252,48 +268,34 @@ export function renderRoundPlan(plan: RoundPlan): string {
         `### ${front.displayName}\n\nFamily: ${front.family}\n\nAssigned surfaces: ${front.assignedSurfaceIds.join(", ")}\n\nPurpose: ${front.purpose}\n\nRequired output:\n${front.requiredOutput.map((item) => `- ${item}`).join("\n")}`
     )
     .join("\n\n");
-  const learnings = plan.globalLearnings
-    .map((learning) => `| G${learning.id} | ${learning.category} | ${learning.title} | ${learning.scope} |`)
-    .join("\n");
 
-  return `# Proteus Round Plan\n\nObjective: ${plan.objective}\n\n## Current Understanding\n\n${plan.currentUnderstanding}\n\n## Global Learnings\n\n| ID | Category | Title | Scope |\n| --- | --- | --- | --- |\n${learnings || "| - | - | - | - |"}\n\n## Selected Surfaces\n\n| ID | Surface | Family | ROI | Reason |\n| --- | --- | --- | ---: | --- |\n${selected || "| - | - | - | - | - |"}\n\n## Skipped Surfaces\n\n| ID | Surface | Family | ROI | Reason |\n| --- | --- | --- | ---: | --- |\n${skipped || "| - | - | - | - | - |"}\n\n## Agent Fronts\n\n${fronts}\n\n## Validation Gates\n\n${plan.validationGates.map((gate) => `- ${gate}`).join("\n")}\n\n## Stop Conditions\n\n${plan.stopConditions.map((condition) => `- ${condition}`).join("\n")}\n\n## Replan Trigger\n\n${plan.replanTrigger}\n`;
+  return `# Proteus Round Plan\n\nObjective: ${plan.objective}\n\nPlanning mode: ${plan.planningMode}\n\n## Current Understanding\n\n${plan.currentUnderstanding || "-"}\n\n## Selected Surfaces\n\n| ID | Surface | Family | ROI | Reason |\n| --- | --- | --- | ---: | --- |\n${selected || "| - | - | - | - | - |"}\n\n## Skipped Surfaces\n\n| ID | Surface | Family | ROI | Reason |\n| --- | --- | --- | ---: | --- |\n${skipped || "| - | - | - | - | - |"}\n\n## Agent Fronts\n\n${fronts || "-"}\n\n## Validation Gates\n\n${plan.validationGates.map((gate) => `- ${gate}`).join("\n")}\n\n## Stop Conditions\n\n${plan.stopConditions.length > 0 ? plan.stopConditions.map((condition) => `- ${condition}`).join("\n") : "-"}\n\n## Replan Trigger\n\n${plan.replanTrigger || "-"}\n`;
 }
 
-function loadGlobalLearnings(db: ProteusDb, objective: string): PlannedGlobalLearning[] {
-  const target = db.getTarget();
-  const scope = target ? defaultGlobalScopeFromTarget(target) : undefined;
-  const globalDb = new GlobalMemoryDb();
-  try {
-    return globalDb
-      .queryLearnings({ text: [objective, scope].filter(Boolean).join(" "), limit: 5 })
-      .map((learning) => ({
-        id: learning.id,
-        category: learning.category,
-        title: learning.title,
-        scope: learning.scope
-      }));
-  } finally {
-    globalDb.close();
-  }
+function plannedSurfaceFromCoordinator(surface: CoordinatorSurfaceInput): PlannedSurface {
+  return {
+    id: surface.id ?? 0,
+    name: surface.name,
+    family: surface.family ?? "coordinator-supplied",
+    roiScore: surface.roiScore ?? 0,
+    reason: surface.reason ?? "Coordinator-supplied target-specific surface.",
+    files: surface.files ?? [],
+    revisitCondition: surface.revisitCondition ?? ""
+  };
 }
 
-function buildAgentFronts(selected: PlannedSurface[]): AgentFront[] {
-  const fronts = new Map<AgentCodename, Set<number>>();
-  for (const surface of selected) {
-    const family = SURFACE_FAMILIES.find((item) => item.family === surface.family);
-    for (const role of family?.roles ?? ["argus"]) {
-      if (!fronts.has(role)) fronts.set(role, new Set());
-      fronts.get(role)?.add(surface.id);
-    }
+function agentFrontFromCoordinator(front: CoordinatorAgentFrontInput): AgentFront {
+  if (!(front.codename in ROLES)) {
+    throw new Error(`Unknown Proteus role in agent front: ${String(front.codename)}`);
   }
-  return [...fronts.entries()].map(([codename, ids]) => ({
-    codename,
-    displayName: ROLES[codename].displayName,
-    family: ROLES[codename].family,
-    assignedSurfaceIds: [...ids],
-    purpose: ROLES[codename].purpose,
-    requiredOutput: ROLES[codename].requiredOutput
-  }));
+  return {
+    codename: front.codename,
+    displayName: ROLES[front.codename].displayName,
+    family: ROLES[front.codename].family,
+    assignedSurfaceIds: front.assignedSurfaceIds ?? [],
+    purpose: front.purpose ?? ROLES[front.codename].purpose,
+    requiredOutput: front.requiredOutput ?? ROLES[front.codename].requiredOutput
+  };
 }
 
 function roiForFamily(family: SurfaceFamily, matchCount: number): RoiFactors {
@@ -312,17 +314,6 @@ function roiForFamily(family: SurfaceFamily, matchCount: number): RoiFactors {
     validationCost: matchCount > 80 ? 7 : 5,
     lowSignalHistory: 0
   };
-}
-
-function selectionReason(roiScore: number, fileCount: number, status: string): string {
-  return `Selected because status=${status}, ROI=${roiScore.toFixed(1)}, and ${fileCount} matching files suggest enough surface for a bounded offensive pass.`;
-}
-
-function skipReason(status: string, roiScore: number): string {
-  if (["exhausted", "low_roi", "blocked"].includes(status)) {
-    return `Skipped by anti-revisit guard because status=${status}.`;
-  }
-  return `Skipped this round because ROI=${roiScore.toFixed(1)} was below selected surfaces.`;
 }
 
 export function surfaceFamilyForPath(filePath: string): string {

@@ -87,6 +87,36 @@ try {
     name: "proteus_plan_round",
     arguments: { root: tmpRoot, objective: "MCP smoke plan", markdown: false }
   });
+  const suppliedPlan = await request("tools/call", {
+    name: "proteus_plan_round",
+    arguments: {
+      root: tmpRoot,
+      objective: "MCP coordinator supplied plan",
+      coordinatorPlan: {
+        currentUnderstanding: "Smoke coordinator context",
+        selectedSurfaces: [
+          {
+            id: 1,
+            name: "Smoke daemon protocol surface",
+            family: "daemon-protocol",
+            reason: "Coordinator supplied a narrow surface"
+          }
+        ],
+        agentFronts: [
+          {
+            codename: "argus",
+            assignedSurfaceIds: [1],
+            purpose: "Inspect the supplied smoke surface"
+          }
+        ]
+      },
+      markdown: false
+    }
+  });
+  const suppliedText = String(suppliedPlan.content?.[0]?.text ?? "");
+  if (!suppliedText.includes('"planningMode": "coordinator_supplied"')) {
+    throw new Error("proteus_plan_round did not preserve coordinator-supplied planning mode");
+  }
   await request("tools/call", {
     name: "proteus_record_global_learning",
     arguments: {
