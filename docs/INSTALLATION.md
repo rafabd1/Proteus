@@ -6,7 +6,11 @@ Proteus has three install surfaces:
 - Codex plugin: installed through a Codex plugin marketplace.
 - Claude Code plugin: `/proteus`, plugin subagents, and MCP config.
 
-## CLI Install From GitHub
+Install the CLI first. The plugin instructions can load without it, but target
+memory, exports, labs, and MCP tools depend on the `proteus` and `proteus-mcp`
+runtime commands.
+
+## 1. CLI Install From GitHub
 
 ```powershell
 npm install -g https://codeload.github.com/rafabd1/Proteus/tar.gz/refs/heads/main
@@ -16,7 +20,7 @@ proteus --version
 Expected shape:
 
 ```text
-@rafabd1/proteus 0.1.17
+@rafabd1/proteus 0.1.18
 ```
 
 The GitHub tarball install uses the committed `dist/` runtime and has no
@@ -58,7 +62,7 @@ npm link
 proteus --version
 ```
 
-## Codex Plugin Install
+## 2. Codex Plugin Install
 
 Codex supports marketplace sources in the form `owner/repo[@ref]`, Git URLs,
 SSH URLs, or local marketplace root directories.
@@ -85,14 +89,13 @@ It exposes the plugin at:
 plugins/proteus
 ```
 
-If Codex does not expose the Proteus MCP tools after the plugin is installed,
-register the MCP server manually from the CLI install:
+Then register the MCP server from the CLI install:
 
 ```powershell
 codex mcp add proteus -- proteus-mcp
 ```
 
-## Claude Code Plugin Install
+## 3. Claude Code Plugin Install
 
 Install directly inside Claude Code:
 
@@ -102,6 +105,12 @@ Install directly inside Claude Code:
 ```
 
 Then use `/proteus` from Claude Code.
+
+Then register the MCP server from the CLI install:
+
+```powershell
+claude mcp add -s user proteus -- proteus-mcp
+```
 
 ## Verify Runtime
 
@@ -117,10 +126,10 @@ proteus --help
 proteus-mcp
 ```
 
-For plugin hosts that support plugin-declared MCP servers, Proteus exposes
-`plugins/proteus/.mcp.json`. If the tools do not appear in Codex, use
-`codex mcp add proteus -- proteus-mcp`. The wrapper builds the runtime if
-`dist/` is not present yet.
+For Codex, use `codex mcp add proteus -- proteus-mcp`. For Claude Code, use
+`claude mcp add -s user proteus -- proteus-mcp`. Plugin hosts that support
+plugin-declared MCP servers can also use `plugins/proteus/.mcp.json`. The
+wrapper builds the runtime if `dist/` is not present yet.
 
 ## Uninstall CLI
 

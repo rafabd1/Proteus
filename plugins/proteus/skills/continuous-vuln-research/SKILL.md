@@ -212,6 +212,12 @@ is:
 codex mcp add proteus -- proteus-mcp
 ```
 
+In Claude Code, use the same CLI runtime with a user-scoped MCP registration:
+
+```bash
+claude mcp add -s user proteus -- proteus-mcp
+```
+
 Do not register MCP with a relative cache path such as
 `./scripts/proteus-mcp.cjs` unless the host explicitly sets the plugin root as
 the server working directory.

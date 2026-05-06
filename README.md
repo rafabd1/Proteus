@@ -44,7 +44,11 @@ Proteus has three install surfaces:
 - Codex plugin: the `continuous-vuln-research` skill plus MCP configuration
 - Claude Code plugin: `/proteus`, plugin subagents, and plugin MCP configuration
 
-### 1. Install The CLI
+Install the CLI first. The plugin instructions and skills can load without it,
+but target memory, exports, labs, and MCP tools depend on the `proteus` and
+`proteus-mcp` runtime commands.
+
+### 1. Install The CLI Runtime
 
 Proteus currently requires Node.js 24 or newer because it uses `node:sqlite` for
 local structured memory.
@@ -57,7 +61,7 @@ proteus --version
 Expected:
 
 ```text
-@rafabd1/proteus 0.1.17
+@rafabd1/proteus 0.1.18
 ```
 
 The codeload tarball is the recommended install path while Proteus is distributed
@@ -73,8 +77,7 @@ codex plugin marketplace add rafabd1/Proteus
 Then install or enable the `proteus` plugin from Codex's plugin UI if your host
 does not install marketplace defaults automatically.
 
-If Codex does not expose the Proteus MCP tools after installing the plugin,
-register the MCP server manually from the CLI install:
+Then register the MCP server from the CLI install:
 
 ```powershell
 codex mcp add proteus -- proteus-mcp
@@ -87,6 +90,12 @@ Install directly inside Claude Code:
 ```text
 /plugin marketplace add rafabd1/Proteus
 /plugin install proteus@proteus-marketplace
+```
+
+Then register the MCP server from the CLI install:
+
+```powershell
+claude mcp add -s user proteus -- proteus-mcp
 ```
 
 ## Quick Start
@@ -276,10 +285,16 @@ proteus learn export [--out <path>]
 
 ## MCP Tools
 
-Codex can use the MCP server through a manual global MCP registration:
+Codex can use the MCP server through a global MCP registration:
 
 ```powershell
 codex mcp add proteus -- proteus-mcp
+```
+
+Claude Code can use the same runtime through a user-scoped MCP registration:
+
+```powershell
+claude mcp add -s user proteus -- proteus-mcp
 ```
 
 Plugin hosts that support plugin-declared MCP servers can also start it through:
