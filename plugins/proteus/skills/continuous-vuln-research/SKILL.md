@@ -252,6 +252,45 @@ evidence. Global learnings live under `~/.vros/global.sqlite` and may store user
 preferences, research heuristics, validation patterns, anti-patterns, targeting
 strategy, tooling notes, and playbook material.
 
+Use memory commands as part of the research loop, not as bookkeeping after the
+fact. The coordinator should update memory whenever the result changes future
+work:
+
+- Use `proteus status` at the start of a session or after reinstalling/runtime
+  changes to confirm the target is initialized and to see whether SQL memory
+  already contains sources, hypotheses, decisions, rounds, and agent outputs.
+- Use `proteus ingest` when local prior work exists in `findings/`, `REPORTS/`,
+  `reports/`, `docs/`, or target-specific research logs. Re-run it after adding
+  or editing important local notes; `unchanged` means the same content hash is
+  already in memory.
+- Use `proteus query duplicates` before spending time on a candidate, surface,
+  primitive, root cause, or impact claim. Treat results as prior coverage hints,
+  not automatic kills. If a result looks relevant, call
+  `proteus show <entityType> <id>` and read the full record before deciding.
+- Use `proteus query memory` for broad exploratory search when you need raw text
+  recall. Do not use broad FTS results as a duplicate verdict without checking
+  the full record.
+- Use `proteus record hypothesis` as soon as a concrete candidate, watchlist
+  item, or discarded idea has a name, primitive, attacker boundary, and impact
+  claim. Record weak or killed ideas too if they are likely to be rediscovered.
+- Use `proteus record evidence` for command output, PoC results, negative
+  controls, code-reading notes, docs/intel references, and other facts that
+  support or kill a hypothesis.
+- Use `proteus record decision` whenever the coordinator promotes, downgrades,
+  discards, blocks, or keeps watching an entity. The reason should be specific
+  enough that a later agent can avoid repeating the same path.
+- Use `proteus record agent-output` after Argus, Loom, Chaos, Libris, Mimic,
+  Artificer, or Skeptic returns. Record covered areas, live candidates, killed
+  hypotheses, probes, uncovered areas, and validation status.
+- Use `proteus update surface` when a surface is covered, exhausted, low ROI,
+  blocked, or watchlisted. Always include a revisit condition that explains what
+  would make the surface worth reopening.
+- Use `proteus learn add` only for reusable cross-target lessons: user
+  preferences, validation patterns, anti-patterns, tooling notes, and general
+  strategy. Do not store target-specific evidence as a global learning.
+- Use `proteus export` when the user needs readable artifacts or when ending a
+  substantial round. Do not treat exports as the canonical database.
+
 Preferred command flow:
 
 ```text
