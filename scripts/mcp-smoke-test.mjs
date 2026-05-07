@@ -65,8 +65,33 @@ try {
     clientInfo: { name: "proteus-smoke-client", version: "0.1.0" }
   });
   const tools = await request("tools/list");
-  if (!tools.tools.some((tool) => tool.name === "proteus_init")) {
-    throw new Error("proteus_init tool was not registered");
+  const toolNames = tools.tools.map((tool) => tool.name);
+  for (const expectedTool of [
+    "proteus_init",
+    "proteus_status",
+    "proteus_ingest",
+    "proteus_observe",
+    "proteus_plan_round",
+    "proteus_roles",
+    "proteus_prompt",
+    "proteus_query_duplicates",
+    "proteus_query_memory",
+    "proteus_get_record",
+    "proteus_record_hypothesis",
+    "proteus_record_evidence",
+    "proteus_record_decision",
+    "proteus_record_agent_output",
+    "proteus_update_surface",
+    "proteus_query_revisit",
+    "proteus_export",
+    "proteus_lab_create",
+    "proteus_record_global_learning",
+    "proteus_query_global_learnings",
+    "proteus_export_global_learnings"
+  ]) {
+    if (!toolNames.includes(expectedTool)) {
+      throw new Error(`${expectedTool} tool was not registered`);
+    }
   }
 
   await request("tools/call", {
@@ -119,6 +144,19 @@ try {
   const suppliedText = String(suppliedPlan.content?.[0]?.text ?? "");
   if (!suppliedText.includes('"planningMode": "coordinator_supplied"')) {
     throw new Error("proteus_plan_round did not preserve coordinator-supplied planning mode");
+  }
+  await request("tools/call", {
+    name: "proteus_record_evidence",
+    arguments: {
+      root: tmpRoot,
+      title: "MCP smoke evidence",
+      kind: "command-output",
+      body: "MCP smoke evidence body"
+    }
+  });
+  const roles = await request("tools/call", { name: "proteus_roles", arguments: {} });
+  if (!String(roles.content?.[0]?.text ?? "").includes("Argus")) {
+    throw new Error("proteus_roles did not return role definitions");
   }
   await request("tools/call", {
     name: "proteus_record_global_learning",

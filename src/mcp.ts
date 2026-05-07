@@ -1,13 +1,18 @@
 #!/usr/bin/env node
+import fs from "node:fs";
+import path from "node:path";
 import process from "node:process";
 import { ProteusDb, createDefaultContract } from "./db";
 import { ingestPaths } from "./ingest";
 import { defaultGlobalScopeFromTarget, GlobalMemoryDb } from "./global-memory";
 import { observeTarget } from "./observe";
 import { ensureInitialSurfaces, planRound, renderRoundPlan } from "./planner";
+import { renderAgentPrompt } from "./prompts";
+import { ROLE_ORDER, ROLES } from "./roles";
 import { exportMarkdown } from "./exporter";
 import { createLab } from "./lab";
 import { resolveTargetRoot } from "./paths";
+import type { AgentCodename } from "./types";
 
 type JsonRpcId = string | number | null;
 type JsonObject = Record<string, unknown>;
@@ -110,6 +115,45 @@ const tools: ToolDefinition[] = [
       })
   },
   {
+    name: "proteus_roles",
+    title: "List Proteus Roles",
+    description: "Return Proteus specialist roles and their output contracts.",
+    inputSchema: schema({}, []),
+    handler: () =>
+      ROLE_ORDER.map((codename) => ({
+        ...ROLES[codename]
+      }))
+  },
+  {
+    name: "proteus_prompt",
+    title: "Render Agent Prompt",
+    description: "Render a Proteus specialist-agent prompt for a bounded surface.",
+    inputSchema: schema(
+      {
+        root: stringProp("Target root path."),
+        role: stringProp("Role codename: argus, loom, chaos, libris, mimic, artificer, or skeptic."),
+        surface: stringProp("Bounded surface assigned by the coordinator."),
+        objective: stringProp("Round or front objective."),
+        avoid: arrayProp("Known paths, claims, or surfaces to avoid.")
+      },
+      ["root", "role", "surface"]
+    ),
+    handler: ({ root, role, surface, objective, avoid }) =>
+      withDb(str(root), (db) => {
+        const codename = str(role) as AgentCodename;
+        if (!(codename in ROLES)) throw new Error(`Unknown Proteus role: ${codename}`);
+        const target = db.getTarget();
+        return renderAgentPrompt({
+          codename,
+          workspace: db.targetRoot,
+          target: target?.name ?? path.basename(db.targetRoot),
+          surface: str(surface),
+          objective: maybeStr(objective) ?? "Run a bounded Proteus research front.",
+          avoid: stringArray(avoid)
+        });
+      })
+  },
+  {
     name: "proteus_query_duplicates",
     title: "Query Possible Duplicates",
     description: "Search SQL memory for prior coverage of an area, candidate, primitive, root cause, or impact claim.",
@@ -176,6 +220,33 @@ const tools: ToolDefinition[] = [
           validationCost: 5,
           killCriteria: maybeStr(input.killCriteria) ?? "",
           revisitCondition: maybeStr(input.revisitCondition) ?? ""
+        })
+      }))
+  },
+  {
+    name: "proteus_record_evidence",
+    title: "Record Evidence",
+    description: "Record evidence such as command output, PoC result, negative control, docs/intel note, or code-reading fact.",
+    inputSchema: schema(
+      {
+        root: stringProp(),
+        title: stringProp(),
+        kind: stringProp(),
+        body: stringProp(),
+        pathOrUrl: stringProp(),
+        command: stringProp()
+      },
+      ["root", "title"]
+    ),
+    handler: (input) =>
+      withDb(str(input.root), (db) => ({
+        ok: true,
+        id: db.addEvidence({
+          title: str(input.title),
+          kind: maybeStr(input.kind) ?? "note",
+          body: maybeStr(input.body) ?? "",
+          pathOrUrl: maybeStr(input.pathOrUrl),
+          command: maybeStr(input.command)
         })
       }))
   },
@@ -264,6 +335,29 @@ const tools: ToolDefinition[] = [
           exhaustionLevel: maybeNum(input.exhaustionLevel)
         });
         return { ok: true, id: input.id };
+      })
+  },
+  {
+    name: "proteus_query_revisit",
+    title: "Query Surface Revisit State",
+    description: "Search surfaces by name or family and return current status, ROI, and revisit conditions.",
+    inputSchema: schema({ root: stringProp(), surface: stringProp("Surface search text.") }, ["root", "surface"]),
+    handler: ({ root, surface }) =>
+      withDb(str(root), (db) => {
+        const query = str(surface).toLowerCase();
+        return db
+          .listSurfaces()
+          .filter((item) => item.name.toLowerCase().includes(query) || item.family.toLowerCase().includes(query))
+          .map((item) => ({
+            entityType: "surface",
+            entityId: item.id,
+            name: item.name,
+            family: item.family,
+            status: item.status,
+            roiScore: item.roiScore,
+            exhaustionLevel: item.exhaustionLevel,
+            revisitCondition: item.revisitCondition
+          }));
       })
   },
   {
@@ -381,7 +475,7 @@ function handleLine(line: string): void {
       sendResult(request.id, {
         protocolVersion: "2025-06-18",
         capabilities: { tools: {} },
-        serverInfo: { name: "proteus", version: "0.1.20" }
+        serverInfo: { name: "proteus", version: packageVersion() }
       });
       return;
     }
@@ -432,6 +526,22 @@ function withDb(root: string, fn: (db: ProteusDb) => unknown): unknown {
   } finally {
     db.close();
   }
+}
+
+function packageVersion(): string {
+  for (const candidate of [
+    path.resolve(__dirname, "..", "package.json"),
+    path.resolve(__dirname, "..", "..", "..", "package.json")
+  ]) {
+    if (!fs.existsSync(candidate)) continue;
+    try {
+      const pkg = JSON.parse(fs.readFileSync(candidate, "utf8")) as { version?: string };
+      if (pkg.version) return pkg.version;
+    } catch {
+      continue;
+    }
+  }
+  return "unknown";
 }
 
 function withGlobalDb(fn: (db: GlobalMemoryDb) => unknown): unknown {

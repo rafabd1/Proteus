@@ -61,7 +61,7 @@ proteus --version
 Expected:
 
 ```text
-@rafabd1/proteus 0.1.24
+@rafabd1/proteus 0.1.25
 ```
 
 The codeload tarball is the recommended install path while Proteus is distributed
@@ -355,13 +355,17 @@ proteus_status
 proteus_ingest
 proteus_observe
 proteus_plan_round
+proteus_roles
+proteus_prompt
 proteus_query_memory
 proteus_get_record
 proteus_query_duplicates
 proteus_record_hypothesis
+proteus_record_evidence
 proteus_record_decision
 proteus_record_agent_output
 proteus_update_surface
+proteus_query_revisit
 proteus_export
 proteus_lab_create
 proteus_record_global_learning

@@ -4,12 +4,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const node_fs_1 = __importDefault(require("node:fs"));
+const node_path_1 = __importDefault(require("node:path"));
 const node_process_1 = __importDefault(require("node:process"));
 const db_1 = require("./db");
 const ingest_1 = require("./ingest");
 const global_memory_1 = require("./global-memory");
 const observe_1 = require("./observe");
 const planner_1 = require("./planner");
+const prompts_1 = require("./prompts");
+const roles_1 = require("./roles");
 const exporter_1 = require("./exporter");
 const lab_1 = require("./lab");
 const paths_1 = require("./paths");
@@ -88,6 +92,41 @@ const tools = [
         })
     },
     {
+        name: "proteus_roles",
+        title: "List Proteus Roles",
+        description: "Return Proteus specialist roles and their output contracts.",
+        inputSchema: schema({}, []),
+        handler: () => roles_1.ROLE_ORDER.map((codename) => ({
+            ...roles_1.ROLES[codename]
+        }))
+    },
+    {
+        name: "proteus_prompt",
+        title: "Render Agent Prompt",
+        description: "Render a Proteus specialist-agent prompt for a bounded surface.",
+        inputSchema: schema({
+            root: stringProp("Target root path."),
+            role: stringProp("Role codename: argus, loom, chaos, libris, mimic, artificer, or skeptic."),
+            surface: stringProp("Bounded surface assigned by the coordinator."),
+            objective: stringProp("Round or front objective."),
+            avoid: arrayProp("Known paths, claims, or surfaces to avoid.")
+        }, ["root", "role", "surface"]),
+        handler: ({ root, role, surface, objective, avoid }) => withDb(str(root), (db) => {
+            const codename = str(role);
+            if (!(codename in roles_1.ROLES))
+                throw new Error(`Unknown Proteus role: ${codename}`);
+            const target = db.getTarget();
+            return (0, prompts_1.renderAgentPrompt)({
+                codename,
+                workspace: db.targetRoot,
+                target: target?.name ?? node_path_1.default.basename(db.targetRoot),
+                surface: str(surface),
+                objective: maybeStr(objective) ?? "Run a bounded Proteus research front.",
+                avoid: stringArray(avoid)
+            });
+        })
+    },
+    {
         name: "proteus_query_duplicates",
         title: "Query Possible Duplicates",
         description: "Search SQL memory for prior coverage of an area, candidate, primitive, root cause, or impact claim.",
@@ -141,6 +180,29 @@ const tools = [
                 validationCost: 5,
                 killCriteria: maybeStr(input.killCriteria) ?? "",
                 revisitCondition: maybeStr(input.revisitCondition) ?? ""
+            })
+        }))
+    },
+    {
+        name: "proteus_record_evidence",
+        title: "Record Evidence",
+        description: "Record evidence such as command output, PoC result, negative control, docs/intel note, or code-reading fact.",
+        inputSchema: schema({
+            root: stringProp(),
+            title: stringProp(),
+            kind: stringProp(),
+            body: stringProp(),
+            pathOrUrl: stringProp(),
+            command: stringProp()
+        }, ["root", "title"]),
+        handler: (input) => withDb(str(input.root), (db) => ({
+            ok: true,
+            id: db.addEvidence({
+                title: str(input.title),
+                kind: maybeStr(input.kind) ?? "note",
+                body: maybeStr(input.body) ?? "",
+                pathOrUrl: maybeStr(input.pathOrUrl),
+                command: maybeStr(input.command)
             })
         }))
     },
@@ -217,6 +279,28 @@ const tools = [
                 exhaustionLevel: maybeNum(input.exhaustionLevel)
             });
             return { ok: true, id: input.id };
+        })
+    },
+    {
+        name: "proteus_query_revisit",
+        title: "Query Surface Revisit State",
+        description: "Search surfaces by name or family and return current status, ROI, and revisit conditions.",
+        inputSchema: schema({ root: stringProp(), surface: stringProp("Surface search text.") }, ["root", "surface"]),
+        handler: ({ root, surface }) => withDb(str(root), (db) => {
+            const query = str(surface).toLowerCase();
+            return db
+                .listSurfaces()
+                .filter((item) => item.name.toLowerCase().includes(query) || item.family.toLowerCase().includes(query))
+                .map((item) => ({
+                entityType: "surface",
+                entityId: item.id,
+                name: item.name,
+                family: item.family,
+                status: item.status,
+                roiScore: item.roiScore,
+                exhaustionLevel: item.exhaustionLevel,
+                revisitCondition: item.revisitCondition
+            }));
         })
     },
     {
@@ -326,7 +410,7 @@ function handleLine(line) {
             sendResult(request.id, {
                 protocolVersion: "2025-06-18",
                 capabilities: { tools: {} },
-                serverInfo: { name: "proteus", version: "0.1.20" }
+                serverInfo: { name: "proteus", version: packageVersion() }
             });
             return;
         }
@@ -376,6 +460,24 @@ function withDb(root, fn) {
     finally {
         db.close();
     }
+}
+function packageVersion() {
+    for (const candidate of [
+        node_path_1.default.resolve(__dirname, "..", "package.json"),
+        node_path_1.default.resolve(__dirname, "..", "..", "..", "package.json")
+    ]) {
+        if (!node_fs_1.default.existsSync(candidate))
+            continue;
+        try {
+            const pkg = JSON.parse(node_fs_1.default.readFileSync(candidate, "utf8"));
+            if (pkg.version)
+                return pkg.version;
+        }
+        catch {
+            continue;
+        }
+    }
+    return "unknown";
 }
 function withGlobalDb(fn) {
     const db = new global_memory_1.GlobalMemoryDb();
