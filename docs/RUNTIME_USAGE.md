@@ -166,9 +166,12 @@ node dist/cli.js query revisit "auth"
 ```
 
 `query duplicates` is a coverage check over SQL memory. It favors hypotheses,
-decisions, agent outputs, rounds, surfaces, and ingested findings/reports, and
-returns compact rows with `entityType#id`, score, matched terms, reason, and
-summary. Use `show <entityType> <id>` to inspect the complete record.
+decisions, evidence, agent outputs, rounds, surfaces, and ingested
+findings/reports/advisories/discard/watchlist/candidate-register files. Generic
+docs and broad source logs stay searchable through `query memory`, but they are
+not treated as duplicate coverage. Results are compact rows with
+`entityType#id`, score, matched terms, reason, and summary. Use
+`show <entityType> <id>` to inspect the complete record.
 
 `query memory` is the broader FTS search for exploratory lookup.
 

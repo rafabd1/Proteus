@@ -272,6 +272,16 @@ work:
   primitive, root cause, or impact claim. Treat results as prior coverage hints,
   not automatic kills. If a result looks relevant, call
   `proteus show <entityType> <id>` and read the full record before deciding.
+  Generic docs and broad source logs are intentionally left to
+  `proteus query memory`; they should not be treated as duplicate coverage by
+  themselves.
+- Use `proteus query memory` alongside `proteus query duplicates` before
+  selecting a surface for a round, writing `round-input.json`, or delegating an
+  agent front. `query memory` is where broad target notes, docs, research logs,
+  prior operator comments, and loose context may appear. Use it to understand
+  why an area may be high ROI, low ROI, blocked, already noisy, or worth
+  revisiting. Do not treat a broad memory hit as a duplicate verdict unless a
+  full record shows actual prior coverage.
 - Use `proteus query memory` for broad exploratory search when you need raw text
   recall. Do not use broad FTS results as a duplicate verdict without checking
   the full record.

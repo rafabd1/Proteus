@@ -98,6 +98,14 @@ function ingestOne(db, fullPath, result) {
 }
 function classifyPath(relative) {
     const normalized = relative.toLowerCase();
+    if (normalized.includes("discard"))
+        return "discarded";
+    if (normalized.includes("watchlist"))
+        return "watchlist";
+    if (normalized.includes("candidate-register") || normalized.includes("candidate_register"))
+        return "candidate_register";
+    if (normalized.includes("research-log") || normalized.includes("research_log"))
+        return "research_log";
     if (normalized.includes("report"))
         return "report";
     if (normalized.includes("finding"))

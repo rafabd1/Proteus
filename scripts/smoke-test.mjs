@@ -29,6 +29,10 @@ try {
     "# Prior Finding\n\nValidation gate duplicate text for smoke testing.\n"
   );
   fs.writeFileSync(
+    path.join(tmpRoot, "docs", "general-note.md"),
+    "# General Note\n\nGeneric glossary mention of broad-only cache glossary phrase.\n"
+  );
+  fs.writeFileSync(
     path.join(tmpRoot, "server.ts"),
     "export function handler(request: Request) { return request.url; }\n"
   );
@@ -135,7 +139,19 @@ try {
   if (!memory.includes("source#") && !memory.includes("hypothesis#")) {
     throw new Error("memory query did not return indexed records");
   }
-  const sourceRecord = run(["show", "source", "1"]);
+  const broadDuplicate = run(["query", "duplicates", "broad-only cache glossary phrase"]);
+  if (!broadDuplicate.includes("No prior coverage found.")) {
+    throw new Error("duplicate coverage query returned generic docs as coverage");
+  }
+  const broadMemory = run(["query", "memory", "broad-only cache glossary phrase"]);
+  if (!broadMemory.includes("source#")) {
+    throw new Error("memory query did not return generic docs");
+  }
+  const sourceId = memory.match(/source#(\d+)/)?.[1];
+  if (!sourceId) {
+    throw new Error("memory query did not expose a source id");
+  }
+  const sourceRecord = run(["show", "source", sourceId]);
   if (!sourceRecord.includes('"entityType": "source"') || !sourceRecord.includes("Prior Finding")) {
     throw new Error("show did not return full source record");
   }

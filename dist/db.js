@@ -252,6 +252,7 @@ class ProteusDb {
         const rows = this.coverageCandidates()
             .map((candidate) => scoreCoverageCandidate(candidate, query, queryTerms))
             .filter((candidate) => candidate.matchedTerms.length >= requiredOverlap || candidate.phraseMatched)
+            .filter(isActionableCoverageResult)
             .sort((a, b) => b.score - a.score || entityRank(a.entityType) - entityRank(b.entityType))
             .slice(0, limit);
         return rows.map(({ searchText: _searchText, phraseMatched: _phraseMatched, ...row }) => row);
@@ -711,6 +712,8 @@ function entityRank(entityType) {
     return ["hypothesis", "decision", "agent_output", "surface", "source", "evidence", "round", "lab"].indexOf(entityType);
 }
 function sourceCoverageWeight(kind) {
+    if (kind === "discarded" || kind === "watchlist" || kind === "candidate_register" || kind === "research_log")
+        return 30;
     if (kind === "finding")
         return 32;
     if (kind === "report")
@@ -720,6 +723,14 @@ function sourceCoverageWeight(kind) {
     if (kind === "doc")
         return 18;
     return 16;
+}
+function isActionableCoverageResult(candidate) {
+    if (candidate.entityType !== "source")
+        return true;
+    const actionableSourceKinds = new Set(["finding", "report", "advisory", "discarded", "watchlist", "candidate_register"]);
+    if (candidate.kind && actionableSourceKinds.has(candidate.kind))
+        return true;
+    return false;
 }
 function surfaceCoverageWeight(status) {
     if (["covered", "exhausted", "low_roi", "blocked", "watch"].includes(status))

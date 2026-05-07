@@ -61,7 +61,7 @@ proteus --version
 Expected:
 
 ```text
-@rafabd1/proteus 0.1.25
+@rafabd1/proteus 0.1.26
 ```
 
 The codeload tarball is the recommended install path while Proteus is distributed
