@@ -1,6 +1,6 @@
 {
   "name": "proteus",
-  "version": "0.1.26",
+  "version": "0.1.27",
   "description": "A plugin for Claude Code and Codex that coordinates structured, continuous, exploitability-driven vulnerability research in arbitrary codebases.",
   "author": {
     "name": "rafabd1",

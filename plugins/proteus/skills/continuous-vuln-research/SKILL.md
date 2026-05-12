@@ -177,7 +177,9 @@ Prefer:
 
 Avoid:
 
-- generic TODO findings;
+- generic TODO/FIXME findings;
+- fix archaeology without a current-version bypass, regression, or incomplete-fix
+  hypothesis;
 - vague best-practice claims;
 - one-off lab behavior;
 - unrealistic attacker control;
@@ -185,6 +187,27 @@ Avoid:
 - integration-only issues outside target responsibility;
 - known or expected behavior;
 - repeated low-ROI surfaces without a new reason.
+
+## Known-Fix And TODO Triage
+
+Treat commits, changelog items, issue-linked fixes, advisory backports, TODO
+comments, FIXME comments, and known bug references as intel, not primary bounty
+targets. They are useful for learning the affected code path, root-cause class,
+test strategy, intro/fix timeline, duplicate risk, and nearby invariants, but
+they are usually low ROI as direct research fronts.
+
+Do not spend a round trying to resurrect the exact fixed, known, or TODO-marked
+issue unless there is a concrete new reason:
+
+- incomplete fix on a supported current version;
+- bypass of the patch or added test;
+- reachable variant in a different supported component;
+- regression introduced after the fix;
+- exceptional exploit chain impact that goes beyond the known issue.
+
+If the only signal is "there was a fix", "there is a TODO/FIXME", "a changelog
+mentions security", or "tests were added", downgrade it to intel/watchlist and
+move the round toward higher-ROI surfaces.
 
 ## Validation Gates
 
@@ -238,6 +261,8 @@ Immediate kill reasons:
 - lab-created behavior;
 - unresolved Skeptic refutation;
 - incomplete public intel or timeline;
+- exact known/fixed/TODO issue without bypass, regression, incomplete-fix, or
+  exceptional-chain evidence;
 - stale UI or metadata without authority;
 - old trivial bug with weak impact.
 
