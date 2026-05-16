@@ -186,16 +186,19 @@ try {
   }
   const record = await request("tools/call", {
     name: "proteus_get_record",
-    arguments: { root: tmpRoot, entityType: "surface", entityId: 1 }
+    arguments: { root: tmpRoot, entityType: "round", entityId: 2 }
   });
   const recordText = String(record.content?.[0]?.text ?? "");
-  if (!recordText.includes('"entityType": "surface"')) {
+  if (!recordText.includes('"entityType": "round"') || !recordText.includes("Smoke daemon protocol surface")) {
     throw new Error("proteus_get_record did not return full record");
   }
-  await request("tools/call", {
-    name: "proteus_update_surface",
-    arguments: { root: tmpRoot, id: 1, status: "covered", revisitCondition: "mcp smoke revisit" }
+  const revisit = await request("tools/call", {
+    name: "proteus_query_revisit",
+    arguments: { root: tmpRoot, surface: "Smoke daemon protocol surface" }
   });
+  if (String(revisit.content?.[0]?.text ?? "") !== "[]") {
+    throw new Error("proteus_query_revisit should be empty before target-specific surfaces exist in memory");
+  }
 
   console.log(`Proteus MCP smoke test passed: ${tmpRoot}`);
 } finally {

@@ -90,7 +90,6 @@ function cmdInit(db, parsed) {
     const name = getString(parsed, "name");
     const contract = (0, db_1.createDefaultContract)(db.targetRoot, name);
     db.initTarget(contract);
-    (0, planner_1.ensureInitialSurfaces)(db);
     (0, paths_1.ensureDir)((0, paths_1.exportsDir)(db.targetRoot));
     console.log(`Initialized Proteus target: ${contract.target}`);
     console.log(`Memory: ${node_path_1.default.join(db.targetRoot, ".vros", "memory.sqlite")}`);
@@ -128,7 +127,6 @@ function cmdIngest(db, inputs) {
 }
 function cmdObserve(db) {
     requireInitialized(db);
-    (0, planner_1.ensureInitialSurfaces)(db);
     const profile = (0, observe_1.observeTarget)(db);
     console.log(JSON.stringify(profile, null, 2));
 }

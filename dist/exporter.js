@@ -27,8 +27,26 @@ function exportMarkdown(db, latestPlan) {
 }
 function writeFile(dir, name, body) {
     const fullPath = node_path_1.default.join(dir, name);
+    if (node_fs_1.default.existsSync(fullPath)) {
+        const current = node_fs_1.default.readFileSync(fullPath, "utf8");
+        if (current === body)
+            return fullPath;
+        const parsed = node_path_1.default.parse(name);
+        const generatedPath = nextGeneratedPath(dir, parsed.name, parsed.ext);
+        node_fs_1.default.writeFileSync(generatedPath, body);
+        return generatedPath;
+    }
     node_fs_1.default.writeFileSync(fullPath, body);
     return fullPath;
+}
+function nextGeneratedPath(dir, baseName, extension) {
+    const stamp = Date.now();
+    for (let index = 0;; index += 1) {
+        const suffix = index === 0 ? "" : `-${index}`;
+        const candidate = node_path_1.default.join(dir, `${baseName}.generated-${stamp}${suffix}${extension}`);
+        if (!node_fs_1.default.existsSync(candidate))
+            return candidate;
+    }
 }
 function renderTarget(target) {
     if (!target)

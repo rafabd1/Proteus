@@ -231,6 +231,15 @@ candidate-register.md
 research-log.md
 ```
 
+`target-contract.md` reflects the target contract stored in SQLite. A fresh
+`proteus init` does not invent impact classes, exclusions, assumptions, or prior
+work paths; those fields remain empty until the agent or user records
+target-specific context.
+
+Exports are non-destructive. If an export file already exists with different
+content, Proteus preserves it and writes the generated view beside it as
+`<name>.generated-<timestamp>.md`.
+
 ## MCP Server
 
 ```powershell

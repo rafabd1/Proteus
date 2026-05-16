@@ -1109,28 +1109,12 @@ export function createDefaultContract(targetRoot: string, name?: string): Target
   return {
     target: name ?? path.basename(targetRoot),
     scopeRoot: targetRoot,
-    inScope: ["."],
+    inScope: [],
     outOfScope: [],
-    existingWork: ["findings", "REPORTS", "reports", ".vros/exports"],
-    primaryImpactClasses: [
-      "unauthorized read",
-      "unauthorized action",
-      "authn/authz failure",
-      "security control bypass",
-      "identity confusion",
-      "cache/state leak",
-      "SSRF",
-      "RCE"
-    ],
-    hardExclusions: [
-      "expected behavior",
-      "duplicate findings",
-      "integration-only issues outside target responsibility",
-      "forced vulnerable configuration",
-      "lab artifacts",
-      "weak crash-only findings"
-    ],
-    assumptions: ["PoCs must use documented, default, or normal correct-practice configuration."],
+    existingWork: [],
+    primaryImpactClasses: [],
+    hardExclusions: [],
+    assumptions: [],
     availableTooling: [],
     credentialsAvailable: "unknown",
     continuousMode: false,

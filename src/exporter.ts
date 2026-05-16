@@ -27,8 +27,25 @@ export function exportMarkdown(db: ProteusDb, latestPlan?: RoundPlan): string[] 
 
 function writeFile(dir: string, name: string, body: string): string {
   const fullPath = path.join(dir, name);
+  if (fs.existsSync(fullPath)) {
+    const current = fs.readFileSync(fullPath, "utf8");
+    if (current === body) return fullPath;
+    const parsed = path.parse(name);
+    const generatedPath = nextGeneratedPath(dir, parsed.name, parsed.ext);
+    fs.writeFileSync(generatedPath, body);
+    return generatedPath;
+  }
   fs.writeFileSync(fullPath, body);
   return fullPath;
+}
+
+function nextGeneratedPath(dir: string, baseName: string, extension: string): string {
+  const stamp = Date.now();
+  for (let index = 0; ; index += 1) {
+    const suffix = index === 0 ? "" : `-${index}`;
+    const candidate = path.join(dir, `${baseName}.generated-${stamp}${suffix}${extension}`);
+    if (!fs.existsSync(candidate)) return candidate;
+  }
 }
 
 function renderTarget(target: ReturnType<ProteusDb["getTarget"]>): string {
@@ -73,4 +90,3 @@ function renderResearchLog(rounds: ReturnType<ProteusDb["listRounds"]>): string 
     .join("\n");
   return `# Research Log\n\n${entries || "No rounds recorded yet.\n"}`;
 }
-

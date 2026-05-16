@@ -7,7 +7,7 @@ import { ingestPaths } from "./ingest";
 import { createLab } from "./lab";
 import { defaultGlobalScopeFromTarget, GlobalMemoryDb, globalMemoryLocation } from "./global-memory";
 import { observeTarget } from "./observe";
-import { ensureInitialSurfaces, planRound, renderRoundPlan } from "./planner";
+import { planRound, renderRoundPlan } from "./planner";
 import { renderAgentPrompt } from "./prompts";
 import { ROLE_ORDER, ROLES } from "./roles";
 import { ensureDir, exportsDir, resolveTargetRoot } from "./paths";
@@ -94,7 +94,6 @@ function cmdInit(db: ProteusDb, parsed: ParsedArgs): void {
   const name = getString(parsed, "name");
   const contract = createDefaultContract(db.targetRoot, name);
   db.initTarget(contract);
-  ensureInitialSurfaces(db);
   ensureDir(exportsDir(db.targetRoot));
   console.log(`Initialized Proteus target: ${contract.target}`);
   console.log(`Memory: ${path.join(db.targetRoot, ".vros", "memory.sqlite")}`);
@@ -137,7 +136,6 @@ function cmdIngest(db: ProteusDb, inputs: string[]): void {
 
 function cmdObserve(db: ProteusDb): void {
   requireInitialized(db);
-  ensureInitialSurfaces(db);
   const profile = observeTarget(db);
   console.log(JSON.stringify(profile, null, 2));
 }

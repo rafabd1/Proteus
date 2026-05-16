@@ -26,7 +26,6 @@ const tools = [
         handler: ({ root, name }) => withDb(str(root), (db) => {
             const contract = (0, db_1.createDefaultContract)(db.targetRoot, maybeStr(name));
             db.initTarget(contract);
-            (0, planner_1.ensureInitialSurfaces)(db);
             return { ok: true, target: contract.target, root: db.targetRoot };
         })
     },
@@ -57,7 +56,6 @@ const tools = [
         description: "Inspect local target environment and store a profile as evidence.",
         inputSchema: schema({ root: stringProp("Target root path.") }, ["root"]),
         handler: ({ root }) => withDb(str(root), (db) => {
-            (0, planner_1.ensureInitialSurfaces)(db);
             return (0, observe_1.observeTarget)(db);
         })
     },

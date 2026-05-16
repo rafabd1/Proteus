@@ -89,7 +89,6 @@ try {
     "--killed",
     "smoke-only duplicate"
   ]);
-  run(["update", "surface", "--id", "1", "--status", "covered", "--revisit", "smoke revisit condition"]);
   run([
     "record",
     "hypothesis",
@@ -156,12 +155,30 @@ try {
     throw new Error("show did not return full source record");
   }
   const revisit = run(["query", "revisit", "request"]);
-  if (!revisit.includes("S1") && !revisit.includes("request")) {
-    throw new Error("revisit query did not return expected surface");
+  if (!revisit.includes("No matching surfaces found.")) {
+    throw new Error("revisit query should be empty before coordinator records target-specific surfaces");
   }
   run(["lab", "create", "--candidate-id", "1", "--name", "smoke-lab"]);
   run(["export"]);
   run(["learn", "export"]);
+  const targetContract = fs.readFileSync(path.join(tmpRoot, ".vros/exports/target-contract.md"), "utf8");
+  for (const inventedDefault of ["SSRF", "RCE", "unauthorized read", "forced vulnerable configuration"]) {
+    if (targetContract.includes(inventedDefault)) {
+      throw new Error(`target contract export included invented default: ${inventedDefault}`);
+    }
+  }
+  fs.writeFileSync(path.join(tmpRoot, ".vros/exports/target-contract.md"), "# Manual Target Contract\n\nkeep me\n");
+  run(["export"]);
+  const preservedTargetContract = fs.readFileSync(path.join(tmpRoot, ".vros/exports/target-contract.md"), "utf8");
+  if (!preservedTargetContract.includes("keep me")) {
+    throw new Error("export overwrote an existing manual target-contract.md");
+  }
+  const generatedContractExports = fs
+    .readdirSync(path.join(tmpRoot, ".vros/exports"))
+    .filter((file) => /^target-contract\.generated-\d+\.md$/.test(file));
+  if (generatedContractExports.length === 0) {
+    throw new Error("export did not write a generated sidecar when target-contract.md already existed");
+  }
 
   for (const required of [
     ".vros/memory.sqlite",

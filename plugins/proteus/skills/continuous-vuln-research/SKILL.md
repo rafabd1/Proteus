@@ -113,6 +113,18 @@ cause, or impact has already been covered. It returns compact coverage rows;
 use `proteus show <entityType> <id>` when the full record is needed. Use
 `proteus query memory` only for broad exploratory full-text search.
 
+`proteus init` is intentionally empty beyond factual target identity. It must
+not invent in-scope paths, impact classes, hard exclusions, assumptions, prior
+work paths, or generic web-app surfaces. If the coordinator does not yet know
+target-specific context, leave those fields empty and continue with memory
+queries, ingestion, observation, and coordinator-authored planning.
+
+`proteus export` is a human-readable view of memory. It is non-destructive: if
+an export file already exists with different content, Proteus preserves it and
+writes a generated sidecar. Do not "fix" target context only by editing
+`target-contract.md` or `surface-map.md`; record the underlying context in SQL
+memory or in the coordinator-supplied round input, then export for reading.
+
 When using `proteus plan-round --plan-json`, write a JSON file with this shape
 before calling the command. The packaged template is
 `plugins/proteus/templates/round-input.json`:
@@ -284,7 +296,8 @@ work:
 - Run `proteus init --root <target-root> --name <target>` before any target
   memory operation if the target has not already been initialized. Do not call
   `ingest`, `plan-round`, `record`, `query`, `show`, `update surface`, `lab`, or
-  `export` against an uninitialized target.
+  `export` against an uninitialized target. A fresh init creates an empty target
+  contract; it does not create generic impact classes or surface categories.
 - Use `proteus status` at the start of a session or after reinstalling/runtime
   changes to confirm the target is initialized and to see whether SQL memory
   already contains sources, hypotheses, decisions, rounds, and agent outputs. If
@@ -329,7 +342,9 @@ work:
   preferences, validation patterns, anti-patterns, tooling notes, and general
   strategy. Do not store target-specific evidence as a global learning.
 - Use `proteus export` when the user needs readable artifacts or when ending a
-  substantial round. Do not treat exports as the canonical database.
+  substantial round. Do not treat exports as the canonical database. If an
+  export sidecar is created because a manual file already existed, preserve the
+  manual file and use the sidecar only as the latest generated view.
 
 Preferred command flow:
 

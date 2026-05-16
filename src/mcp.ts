@@ -6,7 +6,7 @@ import { ProteusDb, createDefaultContract } from "./db";
 import { ingestPaths } from "./ingest";
 import { defaultGlobalScopeFromTarget, GlobalMemoryDb } from "./global-memory";
 import { observeTarget } from "./observe";
-import { ensureInitialSurfaces, planRound, renderRoundPlan } from "./planner";
+import { planRound, renderRoundPlan } from "./planner";
 import { renderAgentPrompt } from "./prompts";
 import { ROLE_ORDER, ROLES } from "./roles";
 import { exportMarkdown } from "./exporter";
@@ -42,7 +42,6 @@ const tools: ToolDefinition[] = [
       withDb(str(root), (db) => {
         const contract = createDefaultContract(db.targetRoot, maybeStr(name));
         db.initTarget(contract);
-        ensureInitialSurfaces(db);
         return { ok: true, target: contract.target, root: db.targetRoot };
       })
   },
@@ -75,7 +74,6 @@ const tools: ToolDefinition[] = [
     inputSchema: schema({ root: stringProp("Target root path.") }, ["root"]),
     handler: ({ root }) =>
       withDb(str(root), (db) => {
-        ensureInitialSurfaces(db);
         return observeTarget(db);
       })
   },
