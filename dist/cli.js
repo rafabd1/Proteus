@@ -24,7 +24,11 @@ function main() {
         return;
     }
     if (!command || command === "--help" || command === "-h" || command === "help") {
-        printHelp();
+        printCommandHelp(command === "help" ? subcommand : undefined);
+        return;
+    }
+    if (isHelpRequested(parsed)) {
+        printCommandHelp(command);
         return;
     }
     const targetRoot = (0, paths_1.resolveTargetRoot)(getString(parsed, "root") ?? process.cwd());
@@ -626,6 +630,34 @@ function roundStatus(parsed) {
     if (status === "active" || status === "paused" || status === "completed" || status === "blocked" || status === "planned")
         return status;
     throw new Error("Round status must be one of: active, paused, completed, blocked, planned");
+}
+function isHelpRequested(parsed) {
+    return (parsed.flags.help === true ||
+        parsed.flags.h === true ||
+        parsed.command.includes("--help") ||
+        parsed.command.includes("-h"));
+}
+function printCommandHelp(command) {
+    if (command === "plan-round") {
+        console.log(`Proteus plan-round
+
+Usage:
+  proteus plan-round [--root <path>] [--objective <text>] [--context <text>] [--plan-json <path>] [--status active|paused|completed|blocked|planned] [--write]
+
+Records a coordinator-authored round plan as an operational research goal.
+It never chooses targets or generates strategic understanding by itself.
+
+Options:
+  --root <path>       Target workspace root.
+  --objective <text>  Round objective.
+  --context <text>    Coordinator-written current understanding for simple scaffolds.
+  --plan-json <path>  JSON plan written by the coordinator.
+  --status <status>   active, paused, completed, blocked, or planned. Defaults to active.
+  --write             Write a Markdown view under .vros/exports/.
+`);
+        return;
+    }
+    printHelp();
 }
 function printHelp() {
     console.log(`Proteus CLI

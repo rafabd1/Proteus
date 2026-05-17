@@ -11,6 +11,7 @@ const cli = path.join(repoRoot, "dist", "cli.js");
 const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proteus-smoke-"));
 const globalRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proteus-global-smoke-"));
 const legacyRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proteus-legacy-smoke-"));
+const helpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proteus-help-smoke-"));
 
 function run(args, cwd = tmpRoot) {
   return execFileSync("node", [cli, ...args], {
@@ -26,6 +27,14 @@ function run(args, cwd = tmpRoot) {
 }
 
 try {
+  const planHelp = run(["plan-round", "--help"], helpRoot);
+  if (!planHelp.includes("Proteus plan-round") || !planHelp.includes("Usage:")) {
+    throw new Error("plan-round --help did not print command help");
+  }
+  if (fs.existsSync(path.join(helpRoot, ".vros"))) {
+    throw new Error("plan-round --help created target memory state");
+  }
+
   fs.mkdirSync(path.join(legacyRoot, ".vros"), { recursive: true });
   const emitWarning = process.emitWarning;
   process.emitWarning = (warning, ...args) => {
@@ -366,4 +375,5 @@ try {
   fs.rmSync(tmpRoot, { recursive: true, force: true });
   fs.rmSync(globalRoot, { recursive: true, force: true });
   fs.rmSync(legacyRoot, { recursive: true, force: true });
+  fs.rmSync(helpRoot, { recursive: true, force: true });
 }
