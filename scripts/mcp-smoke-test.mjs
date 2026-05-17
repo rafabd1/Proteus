@@ -86,6 +86,7 @@ try {
     "proteus_record_agent_output",
     "proteus_update_surface",
     "proteus_update_round",
+    "proteus_update_rounds",
     "proteus_query_revisit",
     "proteus_query_surfaces",
     "proteus_export",
@@ -184,6 +185,17 @@ try {
     name: "proteus_update_round",
     arguments: { root: tmpRoot, id: 2, status: "active" }
   });
+  await request("tools/call", {
+    name: "proteus_plan_round",
+    arguments: { root: tmpRoot, objective: "MCP queued planned round", status: "planned" }
+  });
+  const bulkRoundUpdate = await request("tools/call", {
+    name: "proteus_update_rounds",
+    arguments: { root: tmpRoot, fromStatus: "planned", status: "superseded" }
+  });
+  if (!String(bulkRoundUpdate.content?.[0]?.text ?? "").includes('"updated": 1')) {
+    throw new Error("proteus_update_rounds did not update planned rounds");
+  }
   await request("tools/call", {
     name: "proteus_record_surface",
     arguments: {

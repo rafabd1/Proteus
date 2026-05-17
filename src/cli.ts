@@ -418,7 +418,18 @@ function cmdUpdate(db: ProteusDb, subcommand: string | undefined, parsed: Parsed
     console.log(`Updated round R${id}`);
     return;
   }
-  throw new Error("update requires one of: surface, round");
+  if (subcommand === "rounds" || subcommand === "plans") {
+    const from = requiredRoundStatus(parsed, "from");
+    const status = requiredRoundStatus(parsed, "status");
+    const result = db.updateRoundsByStatus({
+      from,
+      status,
+      keepLatest: getBoolean(parsed, "keep-latest")
+    });
+    console.log(`Updated ${result.updated} rounds from ${from} to ${status}${result.keptId ? `; kept R${result.keptId} as ${from}` : ""}`);
+    return;
+  }
+  throw new Error("update requires one of: surface, round, rounds");
 }
 
 function cmdQuery(db: ProteusDb, subcommand: string | undefined, parsed: ParsedArgs): void {
@@ -659,8 +670,25 @@ function arrayLength(value: unknown): number {
 function roundStatus(parsed: ParsedArgs): RoundStatus | undefined {
   const status = getString(parsed, "status");
   if (status === undefined) return undefined;
-  if (status === "active" || status === "paused" || status === "completed" || status === "blocked" || status === "planned") return status;
-  throw new Error("Round status must be one of: active, paused, completed, blocked, planned");
+  return parseRoundStatus(status);
+}
+
+function requiredRoundStatus(parsed: ParsedArgs, key: string): RoundStatus {
+  return parseRoundStatus(requiredString(parsed, key));
+}
+
+function parseRoundStatus(status: string): RoundStatus {
+  if (
+    status === "active" ||
+    status === "paused" ||
+    status === "completed" ||
+    status === "blocked" ||
+    status === "planned" ||
+    status === "superseded"
+  ) {
+    return status;
+  }
+  throw new Error("Round status must be one of: active, paused, completed, blocked, planned, superseded");
 }
 
 function isHelpRequested(parsed: ParsedArgs): boolean {
@@ -677,7 +705,7 @@ function printCommandHelp(command: string | undefined): void {
     console.log(`Proteus plan-round
 
 Usage:
-  proteus plan-round [--root <path>] [--objective <text>] [--context <text>] [--plan-json <path>] [--status active|paused|completed|blocked|planned] [--write]
+  proteus plan-round [--root <path>] [--objective <text>] [--context <text>] [--plan-json <path>] [--status active|paused|completed|blocked|planned|superseded] [--write]
 
 Records a coordinator-authored round plan as an operational research goal.
 It never chooses targets or generates strategic understanding by itself.
@@ -687,7 +715,7 @@ Options:
   --objective <text>  Round objective.
   --context <text>    Coordinator-written current understanding for simple scaffolds.
   --plan-json <path>  JSON plan written by the coordinator.
-  --status <status>   active, paused, completed, blocked, or planned. Defaults to active.
+  --status <status>   active, paused, completed, blocked, planned, or superseded. Defaults to active.
   --write             Write a Markdown view under .vros/exports/.
 `);
     return;
@@ -703,7 +731,7 @@ Usage:
   proteus status [--root <path>]
   proteus ingest [--root <path>] [paths...]
   proteus observe [--root <path>]
-  proteus plan-round [--root <path>] [--objective <text>] [--context <text>] [--plan-json <path>] [--status active|paused|completed|blocked|planned] [--write]
+  proteus plan-round [--root <path>] [--objective <text>] [--context <text>] [--plan-json <path>] [--status active|paused|completed|blocked|planned|superseded] [--write]
   proteus roles
   proteus prompt --role <argus|loom|chaos|libris|mimic|artificer|skeptic> --surface <text>
   proteus record surface --name <text> [--family <text>] [--files a,b] [--status active|covered|exhausted|low_roi|blocked|watch]
@@ -714,7 +742,8 @@ Usage:
   proteus record agent-output --round-id <id> --role <codename> --surface <text>
   proteus list surfaces|hypotheses|evidence|decisions|gates|rounds [--status <status>] [--limit <n>]
   proteus update surface --id <id> [--status exhausted|low_roi|covered|blocked|watch] [--revisit <text>]
-  proteus update round --id <id> --status active|paused|completed|blocked|planned
+  proteus update round --id <id> --status active|paused|completed|blocked|planned|superseded
+  proteus update rounds --from planned --status superseded [--keep-latest]
   proteus query duplicates <text>
   proteus query memory <text>
   proteus query revisit <surface>

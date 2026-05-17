@@ -100,8 +100,13 @@ understanding by itself.
 Recorded rounds are operational plan goals, not only historical notes. New
 rounds default to `active`. Use `list rounds --status active|paused|completed`
 to recover current or parked work, `show round <id>` to read the full plan, and
-`update round --id <id> --status paused|active|completed|blocked` whenever the
-coordinator pauses, resumes, finishes, or blocks the plan.
+`update round --id <id> --status paused|active|completed|blocked|superseded`
+whenever the coordinator pauses, resumes, finishes, blocks, or replaces the
+plan. `superseded` is the neutral state for old or replaced round records that
+should stay searchable but should not become future work. For legacy workspaces
+with many old `planned` rounds, use `update rounds --from planned --status
+superseded --keep-latest`, then explicitly keep or update the remaining planned
+round.
 
 Minimal `round-input.json` shape:
 
@@ -295,6 +300,7 @@ proteus_record_gate
 proteus_record_agent_output
 proteus_update_surface
 proteus_update_round
+proteus_update_rounds
 proteus_export
 proteus_lab_create
 proteus_record_global_learning

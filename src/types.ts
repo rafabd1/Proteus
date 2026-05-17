@@ -44,7 +44,8 @@ export type RoundStatus =
   | "paused"
   | "completed"
   | "blocked"
-  | "planned";
+  | "planned"
+  | "superseded";
 
 export interface TargetContract {
   target: string;

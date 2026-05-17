@@ -104,10 +104,13 @@ Treat recorded round plans as operational goals. A new `proteus plan-round`
 record defaults to `active`; use `proteus list rounds --status active` or MCP
 `proteus_list_records` with `recordType=rounds` and `status=active` to recover
 the current plan before opening new work. Use `proteus update round --id <id>
---status paused|active|completed|blocked` or MCP `proteus_update_round` when
-the coordinator pauses, resumes, completes, or blocks a plan. Do not create a
-fresh active plan when an existing active plan already describes the current
-objective; update or complete the existing plan first.
+--status paused|active|completed|blocked|superseded` or MCP
+`proteus_update_round` when the coordinator pauses, resumes, completes, blocks,
+or replaces a plan. Use `superseded` as the neutral state for old or replaced
+round records that should remain searchable but should not be treated as future
+work. Do not create a fresh active plan when an existing active plan already
+describes the current objective; update, complete, pause, block, or supersede
+the existing plan first.
 
 Do not ask Proteus runtime commands to generate rational security knowledge.
 Use them to initialize, ingest, observe factual environment data, query memory,
@@ -318,6 +321,11 @@ work:
   active round exists, treat it as the current research goal: read it with
   `proteus show round <id>`, continue its tasks, and only write a replacement
   after pausing, completing, or blocking the current plan.
+- If legacy state contains many old `planned` rounds, do not treat them as a
+  backlog by default. First inspect them, then use
+  `proteus update rounds --from planned --status superseded --keep-latest` or
+  MCP `proteus_update_rounds` to neutralize stale planned records while keeping
+  only the newest intentionally prepared plan.
 - Use `proteus ingest` when local prior work exists in `findings/`, `REPORTS/`,
   `reports/`, `docs/`, or target-specific research logs. Re-run it after adding
   or editing important local notes; `unchanged` means the same content hash is
@@ -370,7 +378,8 @@ work:
 - Use `proteus update round` when the plan state changes. Set it to `paused`
   when parking a round, `active` when resuming it, `completed` when stop
   conditions are satisfied or the round has been fully integrated, and `blocked`
-  when external access, tooling, or user input is required.
+  when external access, tooling, or user input is required. Set old or replaced
+  plans to `superseded` instead of leaving them as `planned`.
 - Use `proteus update surface` when a surface is covered, exhausted, low ROI,
   blocked, or watchlisted. Always include a revisit condition that explains what
   would make the surface worth reopening. Do not use it to invent a surface;
@@ -403,6 +412,7 @@ proteus record gate --root <target-root> --entity-type hypothesis --entity-id <i
 proteus list gates --root <target-root> --entity-type hypothesis --entity-id <id>
 proteus record agent-output --root <target-root> --round-id <id> --role argus --surface "<surface>"
 proteus update round --root <target-root> --id <id> --status completed
+proteus update rounds --root <target-root> --from planned --status superseded --keep-latest
 proteus update surface --root <target-root> --id <id> --status exhausted --revisit "<condition>"
 proteus lab create --root <target-root> --candidate-id <id> --name <name>
 proteus learn query --root <target-root> --target-scope

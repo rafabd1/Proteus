@@ -196,6 +196,20 @@ try {
     throw new Error("update round did not pause the round plan");
   }
   run(["update", "round", "--id", "1", "--status", "active"]);
+  run(["plan-round", "--objective", "Legacy planned smoke round", "--status", "planned"]);
+  run(["plan-round", "--objective", "Next prepared smoke round", "--status", "planned"]);
+  const bulkRoundUpdate = run(["update", "rounds", "--from", "planned", "--status", "superseded", "--keep-latest"]);
+  if (!bulkRoundUpdate.includes("Updated 1 rounds") || !bulkRoundUpdate.includes("kept R3 as planned")) {
+    throw new Error("bulk round update did not supersede old planned rounds while keeping the newest planned round");
+  }
+  const plannedRounds = run(["list", "rounds", "--status", "planned"]);
+  if (!plannedRounds.includes("R3 [planned]") || plannedRounds.includes("R2 [planned]")) {
+    throw new Error("planned rounds were not cleaned up correctly");
+  }
+  const supersededRounds = run(["list", "rounds", "--status", "superseded"]);
+  if (!supersededRounds.includes("R2 [superseded]")) {
+    throw new Error("superseded rounds did not include the old planned round");
+  }
   run([
     "record",
     "agent-output",

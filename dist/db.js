@@ -228,11 +228,25 @@ class ProteusDb {
         if (!current)
             throw new Error(`Round not found: ${input.id}`);
         const status = input.status ?? normalizeRoundStatus(input.outcome ?? current.status);
-        const completedAt = status === "completed" ? nowIso() : null;
+        const completedAt = status === "completed" || status === "superseded" ? nowIso() : null;
         this.db
             .prepare("UPDATE rounds SET outcome = ?, completed_at = ? WHERE id = ?")
             .run(status, completedAt, input.id);
         this.indexFts("round", input.id, `${status}\n${current.objective}\n${current.currentUnderstanding}`);
+    }
+    updateRoundsByStatus(input) {
+        const matches = this.listRounds()
+            .filter((round) => round.status === input.from)
+            .sort((a, b) => b.id - a.id);
+        const keptId = input.keepLatest && matches.length > 0 ? matches[0].id : null;
+        let updated = 0;
+        for (const round of matches) {
+            if (round.id === keptId)
+                continue;
+            this.updateRound({ id: round.id, status: input.status });
+            updated += 1;
+        }
+        return { updated, keptId };
     }
     getRound(id) {
         const row = this.db.prepare("SELECT * FROM rounds WHERE id = ?").get(id);
@@ -651,10 +665,15 @@ function toRoundRow(row) {
     };
 }
 function normalizeRoundStatus(value) {
-    if (value === "active" || value === "paused" || value === "completed" || value === "blocked" || value === "planned") {
+    if (value === "active" ||
+        value === "paused" ||
+        value === "completed" ||
+        value === "blocked" ||
+        value === "planned" ||
+        value === "superseded") {
         return value;
     }
-    return value.length > 0 ? "blocked" : "active";
+    return value.length > 0 ? "superseded" : "active";
 }
 function scoreCoverageCandidate(candidate, query, queryTerms) {
     const normalizedSearch = normalizeText(candidate.searchText);

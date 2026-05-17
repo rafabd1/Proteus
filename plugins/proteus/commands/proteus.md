@@ -58,6 +58,7 @@ proteus show --root <target-root> <entityType> <id>
 proteus record hypothesis --root <target-root> --title "<title>" --impact "<impact>"
 proteus record agent-output --root <target-root> --round-id <id> --role argus --surface "<surface>"
 proteus update round --root <target-root> --id <id> --status completed
+proteus update rounds --root <target-root> --from planned --status superseded --keep-latest
 proteus update surface --root <target-root> --id <id> --status exhausted --revisit "<condition>"
 proteus lab create --root <target-root> --candidate-id <id> --name <name>
 proteus export --root <target-root>
@@ -69,6 +70,11 @@ Use `query duplicates` only for compact finding/report duplicate checks. Use
 `list rounds --status active` to decide whether an area was already killed,
 blocked, downgraded, covered, or part of the current plan. Use `show` to inspect
 a full record from a returned `entityType#id`.
+
+Use `superseded` for old or replaced plans that should remain searchable but
+must not be treated as active or queued work. For legacy workspaces with many
+stale `planned` rounds, run `proteus update rounds --from planned --status
+superseded --keep-latest`, then inspect the remaining planned round.
 
 Record global reusable lessons with `proteus learn add` only when they are not
 target-specific vulnerability claims.

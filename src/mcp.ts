@@ -93,7 +93,7 @@ const tools: ToolDefinition[] = [
         agentFronts: objectArrayProp("Coordinator-supplied bounded agent fronts."),
         stopConditions: arrayProp("Coordinator-supplied stop conditions."),
         replanTrigger: stringProp("Coordinator-supplied replan trigger."),
-        status: stringProp("Plan status: active, paused, completed, blocked, or planned. Defaults to active."),
+        status: stringProp("Plan status: active, paused, completed, blocked, planned, or superseded. Defaults to active."),
         markdown: booleanProp("Return Markdown instead of JSON.")
       },
       ["root", "objective"]
@@ -435,9 +435,9 @@ const tools: ToolDefinition[] = [
   {
     name: "proteus_update_round",
     title: "Update Round Status",
-    description: "Update a Proteus round/plan status so active, paused, completed, blocked, and planned work can be used as real goals.",
+    description: "Update a Proteus round/plan status so active, paused, completed, blocked, planned, and superseded work can be used as real goals.",
     inputSchema: schema(
-      { root: stringProp(), id: numberProp(), status: stringProp("active, paused, completed, blocked, or planned.") },
+      { root: stringProp(), id: numberProp(), status: stringProp("active, paused, completed, blocked, planned, or superseded.") },
       ["root", "id", "status"]
     ),
     handler: (input) =>
@@ -449,6 +449,29 @@ const tools: ToolDefinition[] = [
         });
         return { ok: true, id: input.id, status };
       })
+  },
+  {
+    name: "proteus_update_rounds",
+    title: "Bulk Update Round Status",
+    description: "Bulk-update rounds by status, useful for moving legacy planned rounds to superseded while optionally keeping the newest planned round.",
+    inputSchema: schema(
+      {
+        root: stringProp(),
+        fromStatus: stringProp("Existing status to match."),
+        status: stringProp("New status to set."),
+        keepLatest: booleanProp("Keep the newest matching round unchanged.")
+      },
+      ["root", "fromStatus", "status"]
+    ),
+    handler: (input) =>
+      withDb(str(input.root), (db) => ({
+        ok: true,
+        ...db.updateRoundsByStatus({
+          from: parseRoundStatus(str(input.fromStatus)),
+          status: parseRoundStatus(str(input.status)),
+          keepLatest: input.keepLatest === true
+        })
+      }))
   },
   {
     name: "proteus_query_revisit",
@@ -777,11 +800,21 @@ function maybeNum(value: unknown): number | undefined {
 
 function maybeRoundStatus(value: unknown): RoundStatus | undefined {
   if (value === undefined || value === null) return undefined;
-  const status = str(value);
-  if (status === "active" || status === "paused" || status === "completed" || status === "blocked" || status === "planned") {
+  return parseRoundStatus(str(value));
+}
+
+function parseRoundStatus(status: string): RoundStatus {
+  if (
+    status === "active" ||
+    status === "paused" ||
+    status === "completed" ||
+    status === "blocked" ||
+    status === "planned" ||
+    status === "superseded"
+  ) {
     return status;
   }
-  throw new Error("Round status must be one of: active, paused, completed, blocked, planned");
+  throw new Error("Round status must be one of: active, paused, completed, blocked, planned, superseded");
 }
 
 function stringArray(value: unknown): string[] {

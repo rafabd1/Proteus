@@ -61,7 +61,7 @@ proteus --version
 Expected:
 
 ```text
-@rafabd1/proteus 0.2.1
+@rafabd1/proteus 0.2.2
 ```
 
 The codeload tarball is the recommended install path while Proteus is distributed
@@ -174,6 +174,11 @@ Each recorded round is also a lightweight research goal. New plans default to
 `active`; use `proteus list rounds --status active|paused|completed` to recover
 current work, and `proteus update round --id <id> --status <status>` when the
 coordinator pauses, resumes, completes, or blocks a plan.
+Use `superseded` for old or replaced round records that should remain
+searchable but should not be treated as future work. To clean legacy workspaces
+that have many old `planned` rounds, run
+`proteus update rounds --from planned --status superseded --keep-latest` and
+then explicitly keep or update the one remaining planned round.
 
 Minimal `round-input.json` shape:
 
@@ -315,7 +320,7 @@ proteus init [--root <path>] [--name <target>]
 proteus status [--root <path>]
 proteus ingest [--root <path>] [paths...]
 proteus observe [--root <path>]
-proteus plan-round [--root <path>] [--objective <text>] [--context <text>] [--plan-json <path>] [--status active|paused|completed|blocked|planned] [--write]
+proteus plan-round [--root <path>] [--objective <text>] [--context <text>] [--plan-json <path>] [--status active|paused|completed|blocked|planned|superseded] [--write]
 proteus roles
 proteus prompt --role <argus|loom|chaos|libris|mimic|artificer|skeptic> --surface <text>
 proteus record surface --name <text> [--family <text>] [--files a,b] [--status active|covered|exhausted|low_roi|blocked|watch]
@@ -326,7 +331,8 @@ proteus record gate --entity-type <type> --entity-id <id> --gate <G1|...> [--sta
 proteus record agent-output --round-id <id> --role <codename> --surface <text>
 proteus list surfaces|hypotheses|evidence|decisions|gates|rounds [--status <status>] [--limit <n>]
 proteus update surface --id <id> [--status exhausted|low_roi|covered|blocked|watch] [--revisit <text>]
-proteus update round --id <id> --status active|paused|completed|blocked|planned
+proteus update round --id <id> --status active|paused|completed|blocked|planned|superseded
+proteus update rounds --from planned --status superseded [--keep-latest]
 proteus query duplicates <text>
 proteus query memory <text>
 proteus query revisit <surface>
@@ -382,6 +388,7 @@ proteus_record_gate
 proteus_record_agent_output
 proteus_update_surface
 proteus_update_round
+proteus_update_rounds
 proteus_query_revisit
 proteus_export
 proteus_lab_create

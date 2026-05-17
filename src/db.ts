@@ -389,11 +389,25 @@ export class ProteusDb {
     const current = this.getRound(input.id);
     if (!current) throw new Error(`Round not found: ${input.id}`);
     const status = input.status ?? normalizeRoundStatus(input.outcome ?? current.status);
-    const completedAt = status === "completed" ? nowIso() : null;
+    const completedAt = status === "completed" || status === "superseded" ? nowIso() : null;
     this.db
       .prepare("UPDATE rounds SET outcome = ?, completed_at = ? WHERE id = ?")
       .run(status, completedAt, input.id);
     this.indexFts("round", input.id, `${status}\n${current.objective}\n${current.currentUnderstanding}`);
+  }
+
+  updateRoundsByStatus(input: { from: RoundStatus; status: RoundStatus; keepLatest?: boolean }): { updated: number; keptId: number | null } {
+    const matches = this.listRounds()
+      .filter((round) => round.status === input.from)
+      .sort((a, b) => b.id - a.id);
+    const keptId = input.keepLatest && matches.length > 0 ? matches[0].id : null;
+    let updated = 0;
+    for (const round of matches) {
+      if (round.id === keptId) continue;
+      this.updateRound({ id: round.id, status: input.status });
+      updated += 1;
+    }
+    return { updated, keptId };
   }
 
   getRound(id: number): RoundRow | null {
@@ -1007,10 +1021,17 @@ function toRoundRow(row: Row): RoundRow {
 }
 
 function normalizeRoundStatus(value: string): RoundStatus {
-  if (value === "active" || value === "paused" || value === "completed" || value === "blocked" || value === "planned") {
+  if (
+    value === "active" ||
+    value === "paused" ||
+    value === "completed" ||
+    value === "blocked" ||
+    value === "planned" ||
+    value === "superseded"
+  ) {
     return value;
   }
-  return value.length > 0 ? "blocked" : "active";
+  return value.length > 0 ? "superseded" : "active";
 }
 
 function scoreCoverageCandidate(candidate: CoverageCandidate, query: string, queryTerms: string[]): ScoredCoverageCandidate {
