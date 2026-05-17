@@ -12,7 +12,7 @@ import { ROLE_ORDER, ROLES } from "./roles";
 import { exportMarkdown } from "./exporter";
 import { createLab } from "./lab";
 import { resolveTargetRoot } from "./paths";
-import type { AgentCodename, RoiFactors } from "./types";
+import type { AgentCodename, RoiFactors, RoundStatus } from "./types";
 
 type JsonRpcId = string | number | null;
 type JsonObject = Record<string, unknown>;
@@ -93,14 +93,16 @@ const tools: ToolDefinition[] = [
         agentFronts: objectArrayProp("Coordinator-supplied bounded agent fronts."),
         stopConditions: arrayProp("Coordinator-supplied stop conditions."),
         replanTrigger: stringProp("Coordinator-supplied replan trigger."),
+        status: stringProp("Plan status: active, paused, completed, blocked, or planned. Defaults to active."),
         markdown: booleanProp("Return Markdown instead of JSON.")
       },
       ["root", "objective"]
     ),
-    handler: ({ root, objective, coordinatorPlan, currentUnderstanding, selectedSurfaces, skippedSurfaces, agentFronts, stopConditions, replanTrigger, markdown }) =>
+    handler: ({ root, objective, coordinatorPlan, currentUnderstanding, selectedSurfaces, skippedSurfaces, agentFronts, stopConditions, replanTrigger, status, markdown }) =>
       withDb(str(root), (db) => {
         const plan = planRound(db, {
           objective: str(objective),
+          status: maybeRoundStatus(status),
           coordinatorPlan: objectValue(coordinatorPlan) as never,
           currentUnderstanding: maybeStr(currentUnderstanding),
           selectedSurfaces: objectArray(selectedSurfaces) as never,
@@ -184,12 +186,12 @@ const tools: ToolDefinition[] = [
   {
     name: "proteus_list_records",
     title: "List Memory Records",
-    description: "List structured Proteus records by type: surfaces, hypotheses, evidence, decisions, or gates.",
+    description: "List structured Proteus records by type: surfaces, hypotheses, evidence, decisions, gates, or rounds.",
     inputSchema: schema(
       {
         root: stringProp("Target root path."),
-        recordType: stringProp("surfaces, hypotheses, evidence, decisions, or gates."),
-        status: stringProp("Optional status filter for surfaces or hypotheses."),
+        recordType: stringProp("surfaces, hypotheses, evidence, decisions, gates, or rounds."),
+        status: stringProp("Optional status filter for surfaces, hypotheses, or rounds."),
         text: stringProp("Optional text filter for surfaces."),
         entityType: stringProp("Optional entity type filter for gates."),
         entityId: numberProp("Optional entity id filter for gates."),
@@ -428,6 +430,24 @@ const tools: ToolDefinition[] = [
           exhaustionLevel: maybeNum(input.exhaustionLevel)
         });
         return { ok: true, id: input.id };
+      })
+  },
+  {
+    name: "proteus_update_round",
+    title: "Update Round Status",
+    description: "Update a Proteus round/plan status so active, paused, completed, blocked, and planned work can be used as real goals.",
+    inputSchema: schema(
+      { root: stringProp(), id: numberProp(), status: stringProp("active, paused, completed, blocked, or planned.") },
+      ["root", "id", "status"]
+    ),
+    handler: (input) =>
+      withDb(str(input.root), (db) => {
+        const status = maybeRoundStatus(input.status);
+        db.updateRound({
+          id: num(input.id, 0),
+          status
+        });
+        return { ok: true, id: input.id, status };
       })
   },
   {
@@ -697,7 +717,13 @@ function listRecords(
       .filter((row) => options.entityId === undefined || row.entityId === options.entityId)
       .slice(0, options.limit);
   }
-  throw new Error("recordType must be one of: surfaces, hypotheses, evidence, decisions, gates");
+  if (recordType === "rounds" || recordType === "plans") {
+    return db
+      .listRounds()
+      .filter((row) => !options.status || row.status === options.status)
+      .slice(0, options.limit);
+  }
+  throw new Error("recordType must be one of: surfaces, hypotheses, evidence, decisions, gates, rounds");
 }
 
 function schema(properties: JsonObject, required: string[] = []): JsonObject {
@@ -747,6 +773,15 @@ function num(value: unknown, fallback: number): number {
 
 function maybeNum(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function maybeRoundStatus(value: unknown): RoundStatus | undefined {
+  if (value === undefined || value === null) return undefined;
+  const status = str(value);
+  if (status === "active" || status === "paused" || status === "completed" || status === "blocked" || status === "planned") {
+    return status;
+  }
+  throw new Error("Round status must be one of: active, paused, completed, blocked, planned");
 }
 
 function stringArray(value: unknown): string[] {

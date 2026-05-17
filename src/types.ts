@@ -39,6 +39,13 @@ export type ValidationGateStatus =
   | "blocked"
   | "not_applicable";
 
+export type RoundStatus =
+  | "active"
+  | "paused"
+  | "completed"
+  | "blocked"
+  | "planned";
+
 export interface TargetContract {
   target: string;
   scopeRoot: string;

@@ -511,6 +511,7 @@ proteus_record_decision
 proteus_record_gate
 proteus_record_agent_output
 proteus_update_surface
+proteus_update_round
 proteus_export
 proteus_lab_create
 proteus_record_global_learning

@@ -128,7 +128,9 @@ function planRound(db, input) {
         planInput.stopConditions ??
         planInput.replanTrigger);
     const plan = {
+        id: 0,
         objective,
+        status: coordinatorPlan?.status ?? planInput.status ?? "active",
         planningMode: hasCoordinatorInput ? "coordinator_supplied" : "scaffold",
         currentUnderstanding: coordinatorPlan?.currentUnderstanding ?? planInput.currentUnderstanding ?? "",
         selectedSurfaces: selected,
@@ -154,15 +156,17 @@ function planRound(db, input) {
                 : [],
         replanTrigger: coordinatorPlan?.replanTrigger ?? planInput.replanTrigger ?? ""
     };
-    db.addRound({
+    const roundId = db.addRound({
         objective: plan.objective,
         currentUnderstanding: plan.currentUnderstanding,
         selectedSurfaces: plan.selectedSurfaces,
         skippedSurfaces: plan.skippedSurfaces,
         agentFronts: plan.agentFronts,
         validationGates: plan.validationGates,
-        stopConditions: plan.stopConditions
+        stopConditions: plan.stopConditions,
+        status: plan.status
     });
+    plan.id = roundId;
     return plan;
 }
 function renderRoundPlan(plan) {
@@ -175,7 +179,7 @@ function renderRoundPlan(plan) {
     const fronts = plan.agentFronts
         .map((front) => `### ${front.displayName}\n\nFamily: ${front.family}\n\nAssigned surfaces: ${front.assignedSurfaceIds.join(", ")}\n\nPurpose: ${front.purpose}\n\nRequired output:\n${front.requiredOutput.map((item) => `- ${item}`).join("\n")}`)
         .join("\n\n");
-    return `# Proteus Round Plan\n\nObjective: ${plan.objective}\n\nPlanning mode: ${plan.planningMode}\n\n## Current Understanding\n\n${plan.currentUnderstanding || "-"}\n\n## Selected Surfaces\n\n| ID | Surface | Family | ROI | Reason |\n| --- | --- | --- | ---: | --- |\n${selected || "| - | - | - | - | - |"}\n\n## Skipped Surfaces\n\n| ID | Surface | Family | ROI | Reason |\n| --- | --- | --- | ---: | --- |\n${skipped || "| - | - | - | - | - |"}\n\n## Agent Fronts\n\n${fronts || "-"}\n\n## Validation Gates\n\n${plan.validationGates.map((gate) => `- ${gate}`).join("\n")}\n\n## Stop Conditions\n\n${plan.stopConditions.length > 0 ? plan.stopConditions.map((condition) => `- ${condition}`).join("\n") : "-"}\n\n## Replan Trigger\n\n${plan.replanTrigger || "-"}\n`;
+    return `# Proteus Round Plan\n\nRound: R${plan.id}\n\nStatus: ${plan.status}\n\nObjective: ${plan.objective}\n\nPlanning mode: ${plan.planningMode}\n\n## Current Understanding\n\n${plan.currentUnderstanding || "-"}\n\n## Selected Surfaces\n\n| ID | Surface | Family | ROI | Reason |\n| --- | --- | --- | ---: | --- |\n${selected || "| - | - | - | - | - |"}\n\n## Skipped Surfaces\n\n| ID | Surface | Family | ROI | Reason |\n| --- | --- | --- | ---: | --- |\n${skipped || "| - | - | - | - | - |"}\n\n## Agent Fronts\n\n${fronts || "-"}\n\n## Validation Gates\n\n${plan.validationGates.map((gate) => `- ${gate}`).join("\n")}\n\n## Stop Conditions\n\n${plan.stopConditions.length > 0 ? plan.stopConditions.map((condition) => `- ${condition}`).join("\n") : "-"}\n\n## Replan Trigger\n\n${plan.replanTrigger || "-"}\n`;
 }
 function plannedSurfaceFromCoordinator(surface) {
     return {

@@ -97,7 +97,7 @@ function renderResearchLog(rounds: ReturnType<ProteusDb["listRounds"]>): string 
   const entries = rounds
     .map(
       (round) =>
-        `## ${round.createdAt} - Round ${round.id}\n\nGoal:\n${round.objective}\n\nWhat changed in understanding:\n${round.currentUnderstanding}\n\nDecision:\n${round.outcome}\n`
+        `## ${round.createdAt} - Round ${round.id}\n\nStatus:\n${round.status}\n\nGoal:\n${round.objective}\n\nWhat changed in understanding:\n${round.currentUnderstanding}\n\nStop conditions:\n${Array.isArray(round.stopConditions) && round.stopConditions.length > 0 ? round.stopConditions.map((condition) => `- ${condition}`).join("\n") : "-"}\n`
     )
     .join("\n");
   return `# Research Log\n\n${entries || "No rounds recorded yet.\n"}`;

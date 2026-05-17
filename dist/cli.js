@@ -114,6 +114,12 @@ function cmdStatus(db) {
     console.log(`Decisions: ${stats.decisions}`);
     console.log(`Gates: ${stats.gates}`);
     console.log(`Rounds: ${stats.rounds}`);
+    if (stats.activeRounds.length > 0) {
+        console.log(`Active rounds: ${stats.activeRounds.map((round) => `R${round.id} ${round.objective}`).join(" | ")}`);
+    }
+    else {
+        console.log("Active rounds: none");
+    }
     console.log(`Agent outputs: ${stats.agentOutputs}`);
     console.log(`Labs: ${stats.labs}`);
     console.log(`Profiles: ${stats.profiles}`);
@@ -140,15 +146,16 @@ function cmdPlanRound(db, parsed) {
         "Identify high-ROI, non-obvious vulnerability hypotheses with realistic exploitability.";
     const planInputPath = getString(parsed, "plan-json");
     const planInput = planInputPath
-        ? { objective, coordinatorPlan: readPlanInput(planInputPath) }
+        ? { objective, status: roundStatus(parsed), coordinatorPlan: readPlanInput(planInputPath) }
         : {
             objective,
+            status: roundStatus(parsed),
             currentUnderstanding: getString(parsed, "context")
         };
     const plan = (0, planner_1.planRound)(db, planInput);
     const markdown = (0, planner_1.renderRoundPlan)(plan);
     if (getBoolean(parsed, "write")) {
-        const out = node_path_1.default.join((0, paths_1.exportsDir)(db.targetRoot), `round-plan-${Date.now()}.md`);
+        const out = node_path_1.default.join((0, paths_1.exportsDir)(db.targetRoot), `round-plan-${plan.id}.md`);
         (0, paths_1.ensureDir)(node_path_1.default.dirname(out));
         node_fs_1.default.writeFileSync(out, markdown);
         console.log(`Wrote ${out}`);
@@ -349,7 +356,22 @@ function cmdList(db, subcommand, parsed) {
             console.log("No validation gates recorded.");
         return;
     }
-    throw new Error("list requires one of: surfaces, hypotheses, evidence, decisions, gates");
+    if (subcommand === "rounds" || subcommand === "plans") {
+        const status = getString(parsed, "status");
+        const rows = db
+            .listRounds()
+            .filter((row) => !status || row.status === status)
+            .slice(0, limit);
+        for (const row of rows) {
+            console.log(`R${row.id} [${row.status}] ${row.objective}`);
+            console.log(`  selected=${arrayLength(row.selectedSurfaces)} fronts=${arrayLength(row.agentFronts)} stop=${arrayLength(row.stopConditions)} created=${row.createdAt}`);
+            console.log(`  understanding=${truncateForCli(row.currentUnderstanding || "-", 180)}`);
+        }
+        if (rows.length === 0)
+            console.log("No rounds recorded.");
+        return;
+    }
+    throw new Error("list requires one of: surfaces, hypotheses, evidence, decisions, gates, rounds");
 }
 function cmdUpdate(db, subcommand, parsed) {
     requireInitialized(db);
@@ -363,7 +385,17 @@ function cmdUpdate(db, subcommand, parsed) {
         console.log(`Updated surface S${requiredNumber(parsed, "id")}`);
         return;
     }
-    throw new Error("update requires one of: surface");
+    if (subcommand === "round" || subcommand === "plan") {
+        const id = requiredNumber(parsed, "id");
+        db.updateRound({
+            id,
+            status: roundStatus(parsed),
+            outcome: getString(parsed, "outcome")
+        });
+        console.log(`Updated round R${id}`);
+        return;
+    }
+    throw new Error("update requires one of: surface, round");
 }
 function cmdQuery(db, subcommand, parsed) {
     requireInitialized(db);
@@ -584,6 +616,17 @@ function roiFromFlags(parsed) {
 function truncateForCli(value, limit) {
     return value.length <= limit ? value : `${value.slice(0, limit - 3)}...`;
 }
+function arrayLength(value) {
+    return Array.isArray(value) ? value.length : 0;
+}
+function roundStatus(parsed) {
+    const status = getString(parsed, "status");
+    if (status === undefined)
+        return undefined;
+    if (status === "active" || status === "paused" || status === "completed" || status === "blocked" || status === "planned")
+        return status;
+    throw new Error("Round status must be one of: active, paused, completed, blocked, planned");
+}
 function printHelp() {
     console.log(`Proteus CLI
 
@@ -592,7 +635,7 @@ Usage:
   proteus status [--root <path>]
   proteus ingest [--root <path>] [paths...]
   proteus observe [--root <path>]
-  proteus plan-round [--root <path>] [--objective <text>] [--context <text>] [--plan-json <path>] [--write]
+  proteus plan-round [--root <path>] [--objective <text>] [--context <text>] [--plan-json <path>] [--status active|paused|completed|blocked|planned] [--write]
   proteus roles
   proteus prompt --role <argus|loom|chaos|libris|mimic|artificer|skeptic> --surface <text>
   proteus record surface --name <text> [--family <text>] [--files a,b] [--status active|covered|exhausted|low_roi|blocked|watch]
@@ -601,8 +644,9 @@ Usage:
   proteus record decision --entity-type <type> --entity-id <id> --decision <text> --reason <text>
   proteus record gate --entity-type <type> --entity-id <id> --gate <G1|...> [--status pending|pass|fail|blocked|not_applicable]
   proteus record agent-output --round-id <id> --role <codename> --surface <text>
-  proteus list surfaces|hypotheses|evidence|decisions|gates [--limit <n>]
+  proteus list surfaces|hypotheses|evidence|decisions|gates|rounds [--status <status>] [--limit <n>]
   proteus update surface --id <id> [--status exhausted|low_roi|covered|blocked|watch] [--revisit <text>]
+  proteus update round --id <id> --status active|paused|completed|blocked|planned
   proteus query duplicates <text>
   proteus query memory <text>
   proteus query revisit <surface>

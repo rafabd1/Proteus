@@ -2,7 +2,7 @@ import path from "node:path";
 import { ProteusDb } from "./db";
 import { discoverFiles } from "./observe";
 import { ROLES } from "./roles";
-import type { AgentCodename, JsonValue, RoiFactors, SurfaceInput } from "./types";
+import type { AgentCodename, JsonValue, RoiFactors, RoundStatus, SurfaceInput } from "./types";
 
 interface SurfaceFamily {
   name: string;
@@ -90,7 +90,9 @@ const SURFACE_FAMILIES: SurfaceFamily[] = [
 ];
 
 export interface RoundPlan {
+  id: number;
   objective: string;
+  status: RoundStatus;
   planningMode: "coordinator_supplied" | "scaffold";
   currentUnderstanding: string;
   selectedSurfaces: PlannedSurface[];
@@ -103,6 +105,7 @@ export interface RoundPlan {
 
 export interface PlanRoundInput {
   objective: string;
+  status?: RoundStatus;
   coordinatorPlan?: CoordinatorPlanInput;
   currentUnderstanding?: string;
   selectedSurfaces?: CoordinatorSurfaceInput[];
@@ -130,6 +133,7 @@ export interface CoordinatorAgentFrontInput {
 }
 
 export interface CoordinatorPlanInput {
+  status?: RoundStatus;
   currentUnderstanding?: string;
   selectedSurfaces?: CoordinatorSurfaceInput[];
   skippedSurfaces?: CoordinatorSurfaceInput[];
@@ -208,7 +212,9 @@ export function planRound(db: ProteusDb, input: string | PlanRoundInput): RoundP
       planInput.replanTrigger
   );
   const plan: RoundPlan = {
+    id: 0,
     objective,
+    status: coordinatorPlan?.status ?? planInput.status ?? "active",
     planningMode: hasCoordinatorInput ? "coordinator_supplied" : "scaffold",
     currentUnderstanding: coordinatorPlan?.currentUnderstanding ?? planInput.currentUnderstanding ?? "",
     selectedSurfaces: selected,
@@ -236,15 +242,17 @@ export function planRound(db: ProteusDb, input: string | PlanRoundInput): RoundP
     replanTrigger: coordinatorPlan?.replanTrigger ?? planInput.replanTrigger ?? ""
   };
 
-  db.addRound({
+  const roundId = db.addRound({
     objective: plan.objective,
     currentUnderstanding: plan.currentUnderstanding,
     selectedSurfaces: plan.selectedSurfaces as unknown as JsonValue,
     skippedSurfaces: plan.skippedSurfaces as unknown as JsonValue,
     agentFronts: plan.agentFronts as unknown as JsonValue,
     validationGates: plan.validationGates,
-    stopConditions: plan.stopConditions
+    stopConditions: plan.stopConditions,
+    status: plan.status
   });
+  plan.id = roundId;
 
   return plan;
 }
@@ -269,7 +277,7 @@ export function renderRoundPlan(plan: RoundPlan): string {
     )
     .join("\n\n");
 
-  return `# Proteus Round Plan\n\nObjective: ${plan.objective}\n\nPlanning mode: ${plan.planningMode}\n\n## Current Understanding\n\n${plan.currentUnderstanding || "-"}\n\n## Selected Surfaces\n\n| ID | Surface | Family | ROI | Reason |\n| --- | --- | --- | ---: | --- |\n${selected || "| - | - | - | - | - |"}\n\n## Skipped Surfaces\n\n| ID | Surface | Family | ROI | Reason |\n| --- | --- | --- | ---: | --- |\n${skipped || "| - | - | - | - | - |"}\n\n## Agent Fronts\n\n${fronts || "-"}\n\n## Validation Gates\n\n${plan.validationGates.map((gate) => `- ${gate}`).join("\n")}\n\n## Stop Conditions\n\n${plan.stopConditions.length > 0 ? plan.stopConditions.map((condition) => `- ${condition}`).join("\n") : "-"}\n\n## Replan Trigger\n\n${plan.replanTrigger || "-"}\n`;
+  return `# Proteus Round Plan\n\nRound: R${plan.id}\n\nStatus: ${plan.status}\n\nObjective: ${plan.objective}\n\nPlanning mode: ${plan.planningMode}\n\n## Current Understanding\n\n${plan.currentUnderstanding || "-"}\n\n## Selected Surfaces\n\n| ID | Surface | Family | ROI | Reason |\n| --- | --- | --- | ---: | --- |\n${selected || "| - | - | - | - | - |"}\n\n## Skipped Surfaces\n\n| ID | Surface | Family | ROI | Reason |\n| --- | --- | --- | ---: | --- |\n${skipped || "| - | - | - | - | - |"}\n\n## Agent Fronts\n\n${fronts || "-"}\n\n## Validation Gates\n\n${plan.validationGates.map((gate) => `- ${gate}`).join("\n")}\n\n## Stop Conditions\n\n${plan.stopConditions.length > 0 ? plan.stopConditions.map((condition) => `- ${condition}`).join("\n") : "-"}\n\n## Replan Trigger\n\n${plan.replanTrigger || "-"}\n`;
 }
 
 function plannedSurfaceFromCoordinator(surface: CoordinatorSurfaceInput): PlannedSurface {

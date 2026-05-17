@@ -85,6 +85,7 @@ try {
     "proteus_record_gate",
     "proteus_record_agent_output",
     "proteus_update_surface",
+    "proteus_update_round",
     "proteus_query_revisit",
     "proteus_query_surfaces",
     "proteus_export",
@@ -158,6 +159,31 @@ try {
   if (!suppliedText.includes('"planningMode": "coordinator_supplied"')) {
     throw new Error("proteus_plan_round did not preserve coordinator-supplied planning mode");
   }
+  if (!suppliedText.includes('"status": "active"')) {
+    throw new Error("proteus_plan_round did not create an active plan by default");
+  }
+  const activePlans = await request("tools/call", {
+    name: "proteus_list_records",
+    arguments: { root: tmpRoot, recordType: "rounds", status: "active" }
+  });
+  if (!String(activePlans.content?.[0]?.text ?? "").includes("MCP coordinator supplied plan")) {
+    throw new Error("proteus_list_records did not return active rounds");
+  }
+  await request("tools/call", {
+    name: "proteus_update_round",
+    arguments: { root: tmpRoot, id: 2, status: "paused" }
+  });
+  const pausedPlans = await request("tools/call", {
+    name: "proteus_list_records",
+    arguments: { root: tmpRoot, recordType: "rounds", status: "paused" }
+  });
+  if (!String(pausedPlans.content?.[0]?.text ?? "").includes('"status": "paused"')) {
+    throw new Error("proteus_update_round did not pause a round");
+  }
+  await request("tools/call", {
+    name: "proteus_update_round",
+    arguments: { root: tmpRoot, id: 2, status: "active" }
+  });
   await request("tools/call", {
     name: "proteus_record_surface",
     arguments: {

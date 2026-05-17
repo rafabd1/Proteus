@@ -16,6 +16,7 @@ import type {
   HypothesisInput,
   JsonValue,
   RoiFactors,
+  RoundStatus,
   SurfaceInput,
   TargetContract,
   ValidationGateInput
@@ -347,7 +348,7 @@ export class ProteusDb {
     agentFronts: JsonValue;
     validationGates: JsonValue;
     stopConditions: JsonValue;
-    outcome?: string;
+    status?: RoundStatus;
   }): number {
     const target = requireTarget(this);
     const now = nowIso();
@@ -368,14 +369,36 @@ export class ProteusDb {
         json(round.agentFronts),
         json(round.validationGates),
         json(round.stopConditions),
-        round.outcome ?? "planned",
+        round.status ?? "active",
         now
       );
-    return Number(result.lastInsertRowid);
+    const id = Number(result.lastInsertRowid);
+    this.indexFts(
+      "round",
+      id,
+      `${round.status ?? "active"}\n${round.objective}\n${round.currentUnderstanding}\n${json(round.selectedSurfaces)}\n${json(round.agentFronts)}`
+    );
+    return id;
   }
 
   listRounds(): RoundRow[] {
     return this.db.prepare("SELECT * FROM rounds ORDER BY id DESC").all().map(toRoundRow);
+  }
+
+  updateRound(input: { id: number; status?: RoundStatus; outcome?: string }): void {
+    const current = this.getRound(input.id);
+    if (!current) throw new Error(`Round not found: ${input.id}`);
+    const status = input.status ?? normalizeRoundStatus(input.outcome ?? current.status);
+    const completedAt = status === "completed" ? nowIso() : null;
+    this.db
+      .prepare("UPDATE rounds SET outcome = ?, completed_at = ? WHERE id = ?")
+      .run(status, completedAt, input.id);
+    this.indexFts("round", input.id, `${status}\n${current.objective}\n${current.currentUnderstanding}`);
+  }
+
+  getRound(id: number): RoundRow | null {
+    const row = this.db.prepare("SELECT * FROM rounds WHERE id = ?").get(id) as Row | undefined;
+    return row ? toRoundRow(row) : null;
   }
 
   addAgentOutput(output: {
@@ -493,6 +516,10 @@ export class ProteusDb {
     const latestDecision = this.db
       .prepare("SELECT id, entity_type, entity_id, decision, created_at FROM decisions ORDER BY id DESC LIMIT 1")
       .get() as Row | undefined;
+    const activeRounds = this.db
+      .prepare("SELECT * FROM rounds WHERE outcome = 'active' ORDER BY id DESC")
+      .all()
+      .map(toRoundRow);
     return {
       dbPath: this.dbPath,
       dbSizeBytes: fs.existsSync(this.dbPath) ? fs.statSync(this.dbPath).size : 0,
@@ -506,6 +533,7 @@ export class ProteusDb {
       decisions: this.count("decisions"),
       gates: this.count("validation_gates"),
       rounds: this.count("rounds"),
+      activeRounds,
       agentOutputs: this.count("agent_outputs"),
       labs: this.count("labs"),
       latestSource: latestSource
@@ -801,8 +829,10 @@ export interface RoundRow {
   agentFronts: JsonValue;
   validationGates: JsonValue;
   stopConditions: JsonValue;
+  status: RoundStatus;
   outcome: string;
   createdAt: string;
+  completedAt: string;
 }
 
 export interface SearchRow {
@@ -837,6 +867,7 @@ export interface MemoryStats {
   decisions: number;
   gates: number;
   rounds: number;
+  activeRounds: RoundRow[];
   agentOutputs: number;
   labs: number;
   latestSource: { id: number; kind: string; pathOrUrl: string; title: string; createdAt: string } | null;
@@ -958,6 +989,7 @@ function toValidationGateRow(row: Row): ValidationGateRow {
 }
 
 function toRoundRow(row: Row): RoundRow {
+  const status = normalizeRoundStatus(String(row.outcome ?? ""));
   return {
     id: Number(row.id),
     objective: String(row.objective),
@@ -967,9 +999,18 @@ function toRoundRow(row: Row): RoundRow {
     agentFronts: parseJson(String(row.agent_fronts_json)),
     validationGates: parseJson(String(row.validation_gates_json)),
     stopConditions: parseJson(String(row.stop_conditions_json)),
-    outcome: String(row.outcome ?? ""),
-    createdAt: String(row.created_at)
+    status,
+    outcome: status,
+    createdAt: String(row.created_at),
+    completedAt: String(row.completed_at ?? "")
   };
+}
+
+function normalizeRoundStatus(value: string): RoundStatus {
+  if (value === "active" || value === "paused" || value === "completed" || value === "blocked" || value === "planned") {
+    return value;
+  }
+  return value.length > 0 ? "blocked" : "active";
 }
 
 function scoreCoverageCandidate(candidate: CoverageCandidate, query: string, queryTerms: string[]): ScoredCoverageCandidate {

@@ -173,6 +173,20 @@ try {
     throw new Error("target-scope global learning query did not return expected record");
   }
   run(["plan-round", "--objective", "Smoke high-ROI round", "--write"]);
+  const activeRounds = run(["list", "rounds", "--status", "active"]);
+  if (!activeRounds.includes("R1 [active]") || !activeRounds.includes("Smoke high-ROI round")) {
+    throw new Error("list rounds did not return the active round plan");
+  }
+  const roundRecord = run(["show", "round", "1"]);
+  if (!roundRecord.includes('"status": "active"') || !roundRecord.includes("Smoke high-ROI round")) {
+    throw new Error("show round did not expose active plan status");
+  }
+  run(["update", "round", "--id", "1", "--status", "paused"]);
+  const pausedRounds = run(["list", "rounds", "--status", "paused"]);
+  if (!pausedRounds.includes("R1 [paused]")) {
+    throw new Error("update round did not pause the round plan");
+  }
+  run(["update", "round", "--id", "1", "--status", "active"]);
   run([
     "record",
     "agent-output",

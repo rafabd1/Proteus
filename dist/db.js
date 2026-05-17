@@ -215,11 +215,28 @@ class ProteusDb {
            skipped_surfaces_json, agent_fronts_json, validation_gates_json,
            stop_conditions_json, outcome, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-            .run(target.id, round.objective, round.currentUnderstanding, json(round.selectedSurfaces), json(round.skippedSurfaces), json(round.agentFronts), json(round.validationGates), json(round.stopConditions), round.outcome ?? "planned", now);
-        return Number(result.lastInsertRowid);
+            .run(target.id, round.objective, round.currentUnderstanding, json(round.selectedSurfaces), json(round.skippedSurfaces), json(round.agentFronts), json(round.validationGates), json(round.stopConditions), round.status ?? "active", now);
+        const id = Number(result.lastInsertRowid);
+        this.indexFts("round", id, `${round.status ?? "active"}\n${round.objective}\n${round.currentUnderstanding}\n${json(round.selectedSurfaces)}\n${json(round.agentFronts)}`);
+        return id;
     }
     listRounds() {
         return this.db.prepare("SELECT * FROM rounds ORDER BY id DESC").all().map(toRoundRow);
+    }
+    updateRound(input) {
+        const current = this.getRound(input.id);
+        if (!current)
+            throw new Error(`Round not found: ${input.id}`);
+        const status = input.status ?? normalizeRoundStatus(input.outcome ?? current.status);
+        const completedAt = status === "completed" ? nowIso() : null;
+        this.db
+            .prepare("UPDATE rounds SET outcome = ?, completed_at = ? WHERE id = ?")
+            .run(status, completedAt, input.id);
+        this.indexFts("round", input.id, `${status}\n${current.objective}\n${current.currentUnderstanding}`);
+    }
+    getRound(id) {
+        const row = this.db.prepare("SELECT * FROM rounds WHERE id = ?").get(id);
+        return row ? toRoundRow(row) : null;
     }
     addAgentOutput(output) {
         const target = requireTarget(this);
@@ -299,6 +316,10 @@ class ProteusDb {
         const latestDecision = this.db
             .prepare("SELECT id, entity_type, entity_id, decision, created_at FROM decisions ORDER BY id DESC LIMIT 1")
             .get();
+        const activeRounds = this.db
+            .prepare("SELECT * FROM rounds WHERE outcome = 'active' ORDER BY id DESC")
+            .all()
+            .map(toRoundRow);
         return {
             dbPath: this.dbPath,
             dbSizeBytes: node_fs_1.default.existsSync(this.dbPath) ? node_fs_1.default.statSync(this.dbPath).size : 0,
@@ -312,6 +333,7 @@ class ProteusDb {
             decisions: this.count("decisions"),
             gates: this.count("validation_gates"),
             rounds: this.count("rounds"),
+            activeRounds,
             agentOutputs: this.count("agent_outputs"),
             labs: this.count("labs"),
             latestSource: latestSource
@@ -612,6 +634,7 @@ function toValidationGateRow(row) {
     };
 }
 function toRoundRow(row) {
+    const status = normalizeRoundStatus(String(row.outcome ?? ""));
     return {
         id: Number(row.id),
         objective: String(row.objective),
@@ -621,9 +644,17 @@ function toRoundRow(row) {
         agentFronts: parseJson(String(row.agent_fronts_json)),
         validationGates: parseJson(String(row.validation_gates_json)),
         stopConditions: parseJson(String(row.stop_conditions_json)),
-        outcome: String(row.outcome ?? ""),
-        createdAt: String(row.created_at)
+        status,
+        outcome: status,
+        createdAt: String(row.created_at),
+        completedAt: String(row.completed_at ?? "")
     };
+}
+function normalizeRoundStatus(value) {
+    if (value === "active" || value === "paused" || value === "completed" || value === "blocked" || value === "planned") {
+        return value;
+    }
+    return value.length > 0 ? "blocked" : "active";
 }
 function scoreCoverageCandidate(candidate, query, queryTerms) {
     const normalizedSearch = normalizeText(candidate.searchText);

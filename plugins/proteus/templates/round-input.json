@@ -1,4 +1,5 @@
 {
+  "status": "active",
   "currentUnderstanding": "Coordinator-written summary of what is known about the target, based on prior memory, code reading, observed environment, and dedupe/intel checks. Do not let Proteus generate this.",
   "selectedSurfaces": [
     {
