@@ -102,7 +102,12 @@ try {
   const changelogPath = path.join(tmpRoot, "CHANGELOG.generated.md");
   const changelogOutput = run("node", [path.join(repoRoot, "scripts", "generate-changelog.mjs"), "--version", "v1.0.0", "--out", changelogPath]);
   assertIncludes(changelogOutput, changelogPath, "changelog output path");
-  assertIncludes(fs.readFileSync(changelogPath, "utf8"), "# v1.0.0", "generated changelog");
+  const generatedChangelog = fs.readFileSync(changelogPath, "utf8");
+  assertIncludes(generatedChangelog, "## 1.0.0 - 2026-06-17", "generated changelog version section");
+  assertIncludes(generatedChangelog, "### Added", "generated changelog body");
+  if (generatedChangelog.includes("## Verification")) {
+    throw new Error("generated changelog used commit fallback instead of CHANGELOG.md version notes");
+  }
 
   if (process.platform === "win32") {
     const wrapperVersion = execFileSync(

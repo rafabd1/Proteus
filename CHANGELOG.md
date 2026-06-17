@@ -24,6 +24,7 @@
 - Strengthened coordinator and specialist prompts around Tree-of-Thoughts style branching, ROI ranking, validation gates, reflection checkpoints, and evidence-backed decisions.
 - Updated README and architecture docs to explain plugin, CLI, MCP runtime, campaigns, branches, checkpoints, and release behavior.
 - Expanded CLI and MCP smoke coverage to exercise campaigns, branches, checkpoints, links, similarity, migration, and MCP state recovery.
+- Updated release automation so GitHub Release notes are copied from the matching `CHANGELOG.md` version section, and merges to `main` create the version tag/release when the tag is missing.
 
 ### Migration
 
