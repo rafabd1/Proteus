@@ -64,6 +64,7 @@ const tools: ToolDefinition[] = [
         return {
           initialized: Boolean(target),
           target,
+          proteusVersion: db.getProteusVersionRecord(),
           memory: db.memoryStats()
         };
       })
@@ -76,6 +77,7 @@ const tools: ToolDefinition[] = [
     handler: ({ root }) =>
       withDb(str(root), (db) =>
         toolEnvelope({
+          proteusVersion: db.runMigrations(),
           migrations: db.listMigrations()
         })
       )

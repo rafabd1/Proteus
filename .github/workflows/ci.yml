@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -38,12 +40,18 @@ jobs:
           mkdir -p artifacts
           npm pack --pack-destination artifacts
 
+      - name: Generate changelog
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: node scripts/generate-changelog.mjs --version "$GITHUB_REF_NAME" --out artifacts/CHANGELOG.md
+
       - name: Upload release artifact
         if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v4
         with:
           name: npm-pack
-          path: artifacts/*.tgz
+          path: |
+            artifacts/*.tgz
+            artifacts/CHANGELOG.md
           if-no-files-found: error
 
   release:
@@ -57,6 +65,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Download release artifact
         uses: actions/download-artifact@v4
@@ -68,4 +78,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" artifacts/*.tgz --title "$GITHUB_REF_NAME" --generate-notes
+          gh release create "$GITHUB_REF_NAME" artifacts/*.tgz --title "$GITHUB_REF_NAME" --notes-file artifacts/CHANGELOG.md

@@ -63,7 +63,7 @@ proteus --version
 Expected:
 
 ```text
-@rafabd1/proteus 0.2.2
+@rafabd1/proteus 1.0.0
 ```
 
 The codeload tarball is the recommended install path while Proteus is distributed
@@ -175,6 +175,11 @@ proteus branch add --root C:\path\to\target --campaign-id 1 --title "Cache autho
 proteus campaign checkpoint --root C:\path\to\target --id 1 --confirmed "auth boundary mapped" --open "cache authority branch" --next "validate branch control"
 proteus link --root C:\path\to\target --from-type campaign --from-id 1 --relation has_round --to-type round --to-id 1
 ```
+
+Each target database records the Proteus runtime version that last migrated it.
+On startup, Proteus runs automatic migrations only when that stored version is
+missing or different from the current runtime. `proteus migrate` forces a full
+idempotent migration check and refreshes the stored version.
 
 When exactly one campaign is active, Proteus automatically links new hypotheses,
 evidence, decisions, validation gates, and agent outputs back to that campaign.

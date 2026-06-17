@@ -116,8 +116,12 @@ try {
     name: "proteus_migrate",
     arguments: { root: tmpRoot }
   });
-  if (!String(migrations.content?.[0]?.text ?? "").includes("2026-06-17-campaigns-links-branches")) {
+  const migrationsText = String(migrations.content?.[0]?.text ?? "");
+  if (!migrationsText.includes("2026-06-17-campaigns-links-branches")) {
     throw new Error("proteus_migrate did not report campaigns/links/branches migration");
+  }
+  if (!migrationsText.includes('"currentVersion": "1.0.0"') || !migrationsText.includes('"storedVersion": "1.0.0"')) {
+    throw new Error("proteus_migrate did not report the Proteus database version");
   }
   fs.mkdirSync(path.join(tmpRoot, "REPORTS"), { recursive: true });
   fs.writeFileSync(
@@ -139,6 +143,9 @@ try {
   }
   if (!text.includes('"memory"')) {
     throw new Error("proteus_status did not return memory stats");
+  }
+  if (!text.includes('"proteusVersion"') || !text.includes('"storedVersion": "1.0.0"')) {
+    throw new Error("proteus_status did not return Proteus database version state");
   }
 
   await request("tools/call", {

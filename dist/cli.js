@@ -123,6 +123,8 @@ function cmdStatus(db) {
     console.log(`Target: ${target.name}`);
     console.log(`Root: ${target.rootPath}`);
     console.log(`Memory: ${stats.dbPath} (${stats.dbSizeBytes} bytes)`);
+    const versionRecord = db.getProteusVersionRecord();
+    console.log(`Proteus DB version: ${versionRecord.storedVersion ?? "none"} (runtime ${versionRecord.currentVersion})`);
     console.log(`Sources: ${stats.sources}${stats.sourcesByKind.length > 0 ? ` (${stats.sourcesByKind.map((row) => `${row.kind}=${row.count}`).join(", ")})` : ""}`);
     console.log(`Surfaces: ${stats.surfaces}`);
     console.log(`Hypotheses: ${stats.hypotheses}`);
@@ -148,8 +150,10 @@ function cmdStatus(db) {
     }
 }
 function cmdMigrate(db) {
+    const versionRecord = db.runMigrations();
     const migrations = db.listMigrations();
     console.log(`Migration check complete: ${migrations.length} applied`);
+    console.log(`Proteus DB version: ${versionRecord.storedVersion ?? "none"} (runtime ${versionRecord.currentVersion}, previous ${versionRecord.previousStoredVersion ?? "none"})`);
     for (const migration of migrations) {
         console.log(`- ${migration.version} @ ${migration.appliedAt}`);
     }

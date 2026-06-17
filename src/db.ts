@@ -33,6 +33,7 @@ process.emitWarning = ((warning: string | Error, ...args: unknown[]) => {
 }) as typeof process.emitWarning;
 const { DatabaseSync } = require("node:sqlite") as typeof import("node:sqlite");
 process.emitWarning = emitWarning;
+const CURRENT_PROTEUS_VERSION = packageVersion();
 
 export class ProteusDb {
   readonly targetRoot: string;
@@ -46,7 +47,7 @@ export class ProteusDb {
     this.db = new DatabaseSync(this.dbPath);
     this.db.exec("PRAGMA foreign_keys = ON;");
     this.db.exec("PRAGMA journal_mode = WAL;");
-    this.migrate();
+    this.migrateIfNeeded();
   }
 
   close(): void {
@@ -954,6 +955,25 @@ export class ProteusDb {
       }));
   }
 
+  getProteusVersionRecord(): ProteusVersionRecord {
+    const storedVersion = this.getMetadata("proteus_version");
+    return {
+      currentVersion: CURRENT_PROTEUS_VERSION,
+      storedVersion,
+      migrationRequired: storedVersion !== CURRENT_PROTEUS_VERSION
+    };
+  }
+
+  runMigrations(): ProteusVersionRecord {
+    const before = this.getProteusVersionRecord();
+    this.migrate(true);
+    const after = this.getProteusVersionRecord();
+    return {
+      ...after,
+      previousStoredVersion: before.storedVersion
+    };
+  }
+
   private count(table: string): number {
     const row = this.db.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get() as Row;
     return Number(row.count);
@@ -979,7 +999,15 @@ export class ProteusDb {
     return candidates;
   }
 
-  private migrate(): void {
+  private migrateIfNeeded(): void {
+    this.ensureMetadataTable();
+    if (this.getMetadata("proteus_version") === CURRENT_PROTEUS_VERSION) return;
+    this.migrate(false);
+  }
+
+  private migrate(force: boolean): void {
+    this.ensureMetadataTable();
+    if (!force && this.getMetadata("proteus_version") === CURRENT_PROTEUS_VERSION) return;
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS schema_migrations (
         version TEXT PRIMARY KEY,
@@ -989,6 +1017,34 @@ export class ProteusDb {
     this.applyMigration("2026-05-17-validation-gates-surfaces-and-focused-duplicates", BASE_SCHEMA_SQL);
     this.applyMigration("2026-06-17-campaigns-links-branches", CAMPAIGN_SCHEMA_SQL);
     this.applyMigration("2026-06-17-campaign-checkpoints", CAMPAIGN_CHECKPOINT_SCHEMA_SQL);
+    this.setMetadata("proteus_version", CURRENT_PROTEUS_VERSION);
+  }
+
+  private ensureMetadataTable(): void {
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS proteus_metadata (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+  }
+
+  private getMetadata(key: string): string | null {
+    this.ensureMetadataTable();
+    const row = this.db.prepare("SELECT value FROM proteus_metadata WHERE key = ?").get(key) as Row | undefined;
+    return row ? String(row.value) : null;
+  }
+
+  private setMetadata(key: string, value: string): void {
+    this.ensureMetadataTable();
+    this.db
+      .prepare(
+        `INSERT INTO proteus_metadata (key, value, updated_at)
+         VALUES (?, ?, ?)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`
+      )
+      .run(key, value, nowIso());
   }
 
   private applyMigration(version: string, sql: string): void {
@@ -1455,6 +1511,13 @@ export interface MemoryStats {
 export interface MigrationRow {
   version: string;
   appliedAt: string;
+}
+
+export interface ProteusVersionRecord {
+  currentVersion: string;
+  storedVersion: string | null;
+  migrationRequired: boolean;
+  previousStoredVersion?: string | null;
 }
 
 export interface SourceRow {
@@ -1929,6 +1992,22 @@ function sha256(value: string): string {
 
 function nowIso(): string {
   return new Date().toISOString();
+}
+
+function packageVersion(): string {
+  for (const candidate of [
+    path.resolve(__dirname, "..", "package.json"),
+    path.resolve(__dirname, "..", "..", "..", "package.json")
+  ]) {
+    if (!fs.existsSync(candidate)) continue;
+    try {
+      const pkg = JSON.parse(fs.readFileSync(candidate, "utf8")) as { version?: string };
+      if (pkg.version) return pkg.version;
+    } catch {
+      continue;
+    }
+  }
+  return "unknown";
 }
 
 export function createDefaultContract(targetRoot: string, name?: string): TargetContract {

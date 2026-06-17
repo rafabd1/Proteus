@@ -356,6 +356,8 @@ The migration system should:
 - tolerate existing columns and tables
 - support `proteus migrate --root <target>`
 - run migrations automatically on DB open
+- record the Proteus runtime version in the target database and skip automatic
+  migration checks when the stored version matches the current runtime
 - expose explicit CLI and doctor commands
 - include backup guidance before major migrations
 - include tests against a pre-update fixture database

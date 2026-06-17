@@ -39,6 +39,7 @@ const tools = [
             return {
                 initialized: Boolean(target),
                 target,
+                proteusVersion: db.getProteusVersionRecord(),
                 memory: db.memoryStats()
             };
         })
@@ -49,6 +50,7 @@ const tools = [
         description: "Open the target memory database, run idempotent migrations, and return applied migration versions.",
         inputSchema: schema({ root: stringProp("Target root path.") }, ["root"]),
         handler: ({ root }) => withDb(str(root), (db) => toolEnvelope({
+            proteusVersion: db.runMigrations(),
             migrations: db.listMigrations()
         }))
     },

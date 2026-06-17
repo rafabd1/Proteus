@@ -21,6 +21,7 @@ process.emitWarning = ((warning, ...args) => {
 });
 const { DatabaseSync } = require("node:sqlite");
 process.emitWarning = emitWarning;
+const CURRENT_PROTEUS_VERSION = packageVersion();
 class ProteusDb {
     targetRoot;
     dbPath;
@@ -32,7 +33,7 @@ class ProteusDb {
         this.db = new DatabaseSync(this.dbPath);
         this.db.exec("PRAGMA foreign_keys = ON;");
         this.db.exec("PRAGMA journal_mode = WAL;");
-        this.migrate();
+        this.migrateIfNeeded();
     }
     close() {
         this.db.close();
@@ -601,6 +602,23 @@ class ProteusDb {
             appliedAt: String(row.applied_at)
         }));
     }
+    getProteusVersionRecord() {
+        const storedVersion = this.getMetadata("proteus_version");
+        return {
+            currentVersion: CURRENT_PROTEUS_VERSION,
+            storedVersion,
+            migrationRequired: storedVersion !== CURRENT_PROTEUS_VERSION
+        };
+    }
+    runMigrations() {
+        const before = this.getProteusVersionRecord();
+        this.migrate(true);
+        const after = this.getProteusVersionRecord();
+        return {
+            ...after,
+            previousStoredVersion: before.storedVersion
+        };
+    }
     count(table) {
         const row = this.db.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get();
         return Number(row.count);
@@ -625,7 +643,16 @@ class ProteusDb {
         }
         return candidates;
     }
-    migrate() {
+    migrateIfNeeded() {
+        this.ensureMetadataTable();
+        if (this.getMetadata("proteus_version") === CURRENT_PROTEUS_VERSION)
+            return;
+        this.migrate(false);
+    }
+    migrate(force) {
+        this.ensureMetadataTable();
+        if (!force && this.getMetadata("proteus_version") === CURRENT_PROTEUS_VERSION)
+            return;
         this.db.exec(`
       CREATE TABLE IF NOT EXISTS schema_migrations (
         version TEXT PRIMARY KEY,
@@ -635,6 +662,29 @@ class ProteusDb {
         this.applyMigration("2026-05-17-validation-gates-surfaces-and-focused-duplicates", BASE_SCHEMA_SQL);
         this.applyMigration("2026-06-17-campaigns-links-branches", CAMPAIGN_SCHEMA_SQL);
         this.applyMigration("2026-06-17-campaign-checkpoints", CAMPAIGN_CHECKPOINT_SCHEMA_SQL);
+        this.setMetadata("proteus_version", CURRENT_PROTEUS_VERSION);
+    }
+    ensureMetadataTable() {
+        this.db.exec(`
+      CREATE TABLE IF NOT EXISTS proteus_metadata (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+    }
+    getMetadata(key) {
+        this.ensureMetadataTable();
+        const row = this.db.prepare("SELECT value FROM proteus_metadata WHERE key = ?").get(key);
+        return row ? String(row.value) : null;
+    }
+    setMetadata(key, value) {
+        this.ensureMetadataTable();
+        this.db
+            .prepare(`INSERT INTO proteus_metadata (key, value, updated_at)
+         VALUES (?, ?, ?)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`)
+            .run(key, value, nowIso());
     }
     applyMigration(version, sql) {
         const existing = this.db
@@ -1309,6 +1359,24 @@ function sha256(value) {
 }
 function nowIso() {
     return new Date().toISOString();
+}
+function packageVersion() {
+    for (const candidate of [
+        node_path_1.default.resolve(__dirname, "..", "package.json"),
+        node_path_1.default.resolve(__dirname, "..", "..", "..", "package.json")
+    ]) {
+        if (!node_fs_1.default.existsSync(candidate))
+            continue;
+        try {
+            const pkg = JSON.parse(node_fs_1.default.readFileSync(candidate, "utf8"));
+            if (pkg.version)
+                return pkg.version;
+        }
+        catch {
+            continue;
+        }
+    }
+    return "unknown";
 }
 function createDefaultContract(targetRoot, name) {
     return {

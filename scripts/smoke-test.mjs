@@ -78,12 +78,15 @@ try {
   );
   legacyDb.close();
   const migratedStatus = run(["status", "--root", legacyRoot], legacyRoot);
-  if (!migratedStatus.includes("legacy-target") || !migratedStatus.includes("Gates: 0")) {
+  if (!migratedStatus.includes("legacy-target") || !migratedStatus.includes("Gates: 0") || !migratedStatus.includes("Proteus DB version: 1.0.0")) {
     throw new Error("legacy memory migration did not preserve target and create new gate schema");
   }
   const migratedVersions = run(["migrate", "--root", legacyRoot], legacyRoot);
   if (!migratedVersions.includes("2026-06-17-campaigns-links-branches")) {
     throw new Error("migrate did not report the campaigns/links/branches migration");
+  }
+  if (!migratedVersions.includes("Proteus DB version: 1.0.0") || !migratedVersions.includes("previous 1.0.0")) {
+    throw new Error("migrate did not report the stored Proteus database version");
   }
   run([
     "record",
@@ -120,7 +123,7 @@ try {
 
   run(["init", "--name", "smoke-target"]);
   const status = run(["status"]);
-  if (!status.includes("smoke-target")) {
+  if (!status.includes("smoke-target") || !status.includes("Proteus DB version: 1.0.0")) {
     throw new Error("status did not return initialized target");
   }
   run(["ingest", "docs"]);

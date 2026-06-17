@@ -1,6 +1,6 @@
 {
   "name": "@rafabd1/proteus",
-  "version": "0.2.2",
+  "version": "1.0.0",
   "description": "A plugin for Claude Code and Codex that coordinates structured, continuous vulnerability research against arbitrary codebases.",
   "type": "commonjs",
   "bin": {
@@ -10,7 +10,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/sync-plugin-dist.mjs",
     "check": "tsc -p tsconfig.json --noEmit",
+    "changelog": "node scripts/generate-changelog.mjs",
     "start": "node dist/cli.js",
+    "release:validate": "npm test && node scripts/release-validation.mjs",
     "smoke": "npm run build && node scripts/smoke-test.mjs && node scripts/mcp-smoke-test.mjs",
     "test": "npm run check && npm run smoke"
   },
