@@ -50,6 +50,15 @@ function main() {
             case "plan-round":
                 cmdPlanRound(db, parsed);
                 break;
+            case "campaign":
+                cmdCampaign(db, subcommand, parsed);
+                break;
+            case "branch":
+                cmdBranch(db, subcommand, parsed);
+                break;
+            case "link":
+                cmdLink(db, parsed);
+                break;
             case "roles":
                 cmdRoles();
                 break;
@@ -118,6 +127,7 @@ function cmdStatus(db) {
     console.log(`Decisions: ${stats.decisions}`);
     console.log(`Gates: ${stats.gates}`);
     console.log(`Rounds: ${stats.rounds}`);
+    console.log(`Campaigns: ${stats.campaigns}`);
     if (stats.activeRounds.length > 0) {
         console.log(`Active rounds: ${stats.activeRounds.map((round) => `R${round.id} ${round.objective}`).join(" | ")}`);
     }
@@ -167,6 +177,110 @@ function cmdPlanRound(db, parsed) {
     else {
         console.log(markdown);
     }
+}
+function cmdCampaign(db, subcommand, parsed) {
+    requireInitialized(db);
+    if (subcommand === "create") {
+        const id = db.addCampaign({
+            title: requiredString(parsed, "title"),
+            objective: getString(parsed, "objective") ?? requiredString(parsed, "title"),
+            status: campaignStatus(parsed) ?? "active",
+            currentStateSummary: getString(parsed, "state"),
+            recentLearningSummary: getString(parsed, "learnings")
+        });
+        console.log(`Created campaign C${id}`);
+        return;
+    }
+    if (subcommand === "resume" || subcommand === "digest") {
+        const id = getNumber(parsed, "id") ?? db.listCampaigns("active")[0]?.id;
+        if (!id) {
+            console.log("No active campaign found.");
+            return;
+        }
+        console.log(JSON.stringify(db.campaignDigest(id), null, 2));
+        return;
+    }
+    if (subcommand === "checkpoint") {
+        const id = requiredNumber(parsed, "id");
+        db.updateCampaign({
+            id,
+            status: campaignStatus(parsed),
+            currentStateSummary: getString(parsed, "state"),
+            recentLearningSummary: getString(parsed, "learnings"),
+            eventSummary: getString(parsed, "summary") ?? "Campaign checkpoint recorded."
+        });
+        console.log(`Checkpointed campaign C${id}`);
+        return;
+    }
+    if (subcommand === "close") {
+        const id = requiredNumber(parsed, "id");
+        db.updateCampaign({
+            id,
+            status: campaignStatus(parsed) ?? "completed",
+            eventSummary: getString(parsed, "summary") ?? "Campaign closed."
+        });
+        console.log(`Closed campaign C${id}`);
+        return;
+    }
+    throw new Error("campaign requires one of: create, resume, digest, checkpoint, close");
+}
+function cmdBranch(db, subcommand, parsed) {
+    requireInitialized(db);
+    if (subcommand === "add" || subcommand === "create") {
+        const id = db.addHypothesisBranch({
+            campaignId: getNumber(parsed, "campaign-id"),
+            roundId: getNumber(parsed, "round-id"),
+            surfaceId: getNumber(parsed, "surface-id"),
+            title: requiredString(parsed, "title"),
+            hypothesis: getString(parsed, "hypothesis") ?? requiredString(parsed, "title"),
+            attackPrimitive: getString(parsed, "primitive") ?? "unknown",
+            whyNonObvious: getString(parsed, "why-non-obvious") ?? "",
+            preconditions: splitList(getString(parsed, "preconditions") ?? ""),
+            steps: splitList(getString(parsed, "steps") ?? ""),
+            successCriteria: splitList(getString(parsed, "success") ?? ""),
+            negativeControls: splitList(getString(parsed, "negative-controls") ?? ""),
+            killConditions: splitList(getString(parsed, "kill-conditions") ?? ""),
+            roi: {
+                probability: getNumber(parsed, "probability") ?? 1,
+                impact: getNumber(parsed, "impact") ?? 1,
+                effort: getNumber(parsed, "effort") ?? 1,
+                novelty: getNumber(parsed, "novelty") ?? 1
+            },
+            status: branchStatus(parsed) ?? "open"
+        });
+        console.log(`Recorded branch B${id}`);
+        return;
+    }
+    if (subcommand === "list" || subcommand === "branches") {
+        const rows = db.listHypothesisBranches({
+            campaignId: getNumber(parsed, "campaign-id"),
+            roundId: getNumber(parsed, "round-id"),
+            status: branchStatus(parsed),
+            limit: getNumber(parsed, "limit") ?? 50
+        });
+        for (const row of rows) {
+            console.log(`B${row.id} [${row.status}] ${row.title}`);
+            console.log(`  primitive=${row.attackPrimitive} campaign=${row.campaignId ?? "-"} round=${row.roundId ?? "-"} surface=${row.surfaceId ?? "-"}`);
+            console.log(`  kill=${arrayLength(row.killConditions)} steps=${arrayLength(row.steps)} non-obvious=${truncateForCli(row.whyNonObvious || "-", 120)}`);
+        }
+        if (rows.length === 0)
+            console.log("No branches recorded.");
+        return;
+    }
+    throw new Error("branch requires one of: add, create, list");
+}
+function cmdLink(db, parsed) {
+    requireInitialized(db);
+    const id = db.addEntityLink({
+        fromType: requiredString(parsed, "from-type"),
+        fromId: requiredNumber(parsed, "from-id"),
+        toType: requiredString(parsed, "to-type"),
+        toId: requiredNumber(parsed, "to-id"),
+        relation: requiredString(parsed, "relation"),
+        confidence: getNumber(parsed, "confidence") ?? 1,
+        note: getString(parsed, "note")
+    });
+    console.log(`Recorded link L${id}`);
 }
 function readPlanInput(filePath) {
     const fullPath = node_path_1.default.resolve(filePath);
@@ -375,7 +489,49 @@ function cmdList(db, subcommand, parsed) {
             console.log("No rounds recorded.");
         return;
     }
-    throw new Error("list requires one of: surfaces, hypotheses, evidence, decisions, gates, rounds");
+    if (subcommand === "campaigns") {
+        const status = campaignStatus(parsed);
+        const rows = db.listCampaigns(status).slice(0, limit);
+        for (const row of rows) {
+            console.log(`C${row.id} [${row.status}] ${row.title}`);
+            console.log(`  objective=${truncateForCli(row.objective, 180)}`);
+            console.log(`  state=${truncateForCli(row.currentStateSummary || "-", 180)}`);
+        }
+        if (rows.length === 0)
+            console.log("No campaigns recorded.");
+        return;
+    }
+    if (subcommand === "branches") {
+        const rows = db.listHypothesisBranches({
+            campaignId: getNumber(parsed, "campaign-id"),
+            roundId: getNumber(parsed, "round-id"),
+            status: branchStatus(parsed),
+            limit
+        });
+        for (const row of rows) {
+            console.log(`B${row.id} [${row.status}] ${row.title}`);
+            console.log(`  primitive=${row.attackPrimitive} campaign=${row.campaignId ?? "-"} round=${row.roundId ?? "-"}`);
+        }
+        if (rows.length === 0)
+            console.log("No branches recorded.");
+        return;
+    }
+    if (subcommand === "links") {
+        const rows = db.listEntityLinks({
+            entityType: getString(parsed, "entity-type"),
+            entityId: getNumber(parsed, "entity-id"),
+            limit
+        });
+        for (const row of rows) {
+            console.log(`L${row.id} ${row.fromType}#${row.fromId} -[${row.relation}]-> ${row.toType}#${row.toId} confidence=${row.confidence}`);
+            if (row.note)
+                console.log(`  ${truncateForCli(row.note, 180)}`);
+        }
+        if (rows.length === 0)
+            console.log("No entity links recorded.");
+        return;
+    }
+    throw new Error("list requires one of: surfaces, hypotheses, evidence, decisions, gates, rounds, campaigns, branches, links");
 }
 function cmdUpdate(db, subcommand, parsed) {
     requireInitialized(db);
@@ -654,6 +810,34 @@ function parseRoundStatus(status) {
     }
     throw new Error("Round status must be one of: active, paused, completed, blocked, planned, superseded");
 }
+function campaignStatus(parsed) {
+    const status = getString(parsed, "status");
+    if (status === undefined)
+        return undefined;
+    return parseCampaignStatus(status);
+}
+function parseCampaignStatus(status) {
+    if (status === "active" ||
+        status === "paused" ||
+        status === "completed" ||
+        status === "blocked" ||
+        status === "superseded") {
+        return status;
+    }
+    throw new Error("Campaign status must be one of: active, paused, completed, blocked, superseded");
+}
+function branchStatus(parsed) {
+    const status = getString(parsed, "status");
+    if (status === undefined)
+        return undefined;
+    return parseBranchStatus(status);
+}
+function parseBranchStatus(status) {
+    if (status === "open" || status === "testing" || status === "killed" || status === "promoted" || status === "blocked") {
+        return status;
+    }
+    throw new Error("Branch status must be one of: open, testing, killed, promoted, blocked");
+}
 function isHelpRequested(parsed) {
     return (parsed.flags.help === true ||
         parsed.flags.h === true ||
@@ -691,15 +875,21 @@ Usage:
   proteus ingest [--root <path>] [paths...]
   proteus observe [--root <path>]
   proteus plan-round [--root <path>] [--objective <text>] [--context <text>] [--plan-json <path>] [--status active|paused|completed|blocked|planned|superseded] [--write]
+  proteus campaign create --title <text> [--objective <text>] [--status active|paused|completed|blocked|superseded]
+  proteus campaign resume [--id <id>]
+  proteus campaign checkpoint --id <id> [--state <text>] [--learnings <text>] [--summary <text>]
+  proteus branch add --title <text> [--campaign-id <id>] [--round-id <id>] [--primitive <text>]
+  proteus branch list [--campaign-id <id>] [--status open|testing|killed|promoted|blocked]
+  proteus link --from-type <type> --from-id <id> --relation <text> --to-type <type> --to-id <id>
   proteus roles
-  proteus prompt --role <argus|loom|chaos|libris|mimic|artificer|skeptic> --surface <text>
+  proteus prompt --role <argus|loom|chaos|libris|mimic|artificer|skeptic|cicada> --surface <text>
   proteus record surface --name <text> [--family <text>] [--files a,b] [--status active|covered|exhausted|low_roi|blocked|watch]
   proteus record hypothesis --title <text> [--surface-id <id>] [--impact <text>]
   proteus record evidence --title <text> [--kind <kind>] [--body <text>]
   proteus record decision --entity-type <type> --entity-id <id> --decision <text> --reason <text>
   proteus record gate --entity-type <type> --entity-id <id> --gate <G1|...> [--status pending|pass|fail|blocked|not_applicable]
   proteus record agent-output --round-id <id> --role <codename> --surface <text>
-  proteus list surfaces|hypotheses|evidence|decisions|gates|rounds [--status <status>] [--limit <n>]
+  proteus list surfaces|hypotheses|evidence|decisions|gates|rounds|campaigns|branches|links [--status <status>] [--limit <n>]
   proteus update surface --id <id> [--status exhausted|low_roi|covered|blocked|watch] [--revisit <text>]
   proteus update round --id <id> --status active|paused|completed|blocked|planned|superseded
   proteus update rounds --from planned --status superseded [--keep-latest]
@@ -707,7 +897,7 @@ Usage:
   proteus query memory <text>
   proteus query revisit <surface>
   proteus query surfaces <text>
-  proteus show <source|surface|hypothesis|evidence|decision|gate|round|agent_output|lab> <id>
+  proteus show <source|surface|hypothesis|evidence|decision|gate|round|campaign|branch|entity_link|agent_output|lab> <id>
   proteus export [--root <path>]
   proteus lab create --candidate-id <id> [--name <name>]
   proteus learn add --title <text> [--category <category>] [--scope <scope>] [--body <text>] [--tags a,b]

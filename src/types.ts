@@ -13,7 +13,8 @@ export type AgentCodename =
   | "libris"
   | "mimic"
   | "artificer"
-  | "skeptic";
+  | "skeptic"
+  | "cicada";
 
 export type SurfaceStatus =
   | "unmapped"
@@ -46,6 +47,20 @@ export type RoundStatus =
   | "blocked"
   | "planned"
   | "superseded";
+
+export type CampaignStatus =
+  | "active"
+  | "paused"
+  | "completed"
+  | "blocked"
+  | "superseded";
+
+export type BranchStatus =
+  | "open"
+  | "testing"
+  | "killed"
+  | "promoted"
+  | "blocked";
 
 export interface TargetContract {
   target: string;

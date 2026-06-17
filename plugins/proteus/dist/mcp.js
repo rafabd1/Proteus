@@ -92,6 +92,153 @@ const tools = [
         })
     },
     {
+        name: "proteus_campaign_create",
+        title: "Create Campaign",
+        description: "Create a campaign as the durable container above rounds, surfaces, branches, evidence, decisions, and agent outputs.",
+        inputSchema: schema({
+            root: stringProp("Target root path."),
+            title: stringProp("Campaign title."),
+            objective: stringProp("Campaign objective."),
+            status: stringProp("active, paused, completed, blocked, or superseded."),
+            currentStateSummary: stringProp("Short current-state summary."),
+            recentLearningSummary: stringProp("Short recent-learning summary.")
+        }, ["root", "title"]),
+        handler: (input) => withDb(str(input.root), (db) => {
+            const id = db.addCampaign({
+                title: str(input.title),
+                objective: maybeStr(input.objective) ?? str(input.title),
+                status: maybeCampaignStatus(input.status),
+                currentStateSummary: maybeStr(input.currentStateSummary),
+                recentLearningSummary: maybeStr(input.recentLearningSummary)
+            });
+            return { ok: true, id, campaign: db.getCampaign(id) };
+        })
+    },
+    {
+        name: "proteus_campaign_resume",
+        title: "Resume Campaign",
+        description: "Return a compact campaign digest with active rounds, open branches, recent events, and links.",
+        inputSchema: schema({ root: stringProp("Target root path."), id: numberProp("Campaign id. Defaults to latest active campaign.") }, ["root"]),
+        handler: (input) => withDb(str(input.root), (db) => {
+            const id = maybeNum(input.id) ?? db.listCampaigns("active")[0]?.id;
+            if (!id)
+                return { ok: true, campaign: null, message: "No active campaign found." };
+            return { ok: true, ...db.campaignDigest(id) };
+        })
+    },
+    {
+        name: "proteus_campaign_checkpoint",
+        title: "Checkpoint Campaign",
+        description: "Update campaign summaries and append a timeline checkpoint event.",
+        inputSchema: schema({
+            root: stringProp("Target root path."),
+            id: numberProp("Campaign id."),
+            status: stringProp("active, paused, completed, blocked, or superseded."),
+            currentStateSummary: stringProp("Updated current-state summary."),
+            recentLearningSummary: stringProp("Updated recent-learning summary."),
+            summary: stringProp("Timeline event summary.")
+        }, ["root", "id"]),
+        handler: (input) => withDb(str(input.root), (db) => {
+            const id = num(input.id, 0);
+            db.updateCampaign({
+                id,
+                status: maybeCampaignStatus(input.status),
+                currentStateSummary: maybeStr(input.currentStateSummary),
+                recentLearningSummary: maybeStr(input.recentLearningSummary),
+                eventSummary: maybeStr(input.summary) ?? "Campaign checkpoint recorded."
+            });
+            return { ok: true, id, campaign: db.getCampaign(id) };
+        })
+    },
+    {
+        name: "proteus_campaign_close",
+        title: "Close Campaign",
+        description: "Close a campaign as completed, blocked, or superseded while preserving the timeline.",
+        inputSchema: schema({
+            root: stringProp("Target root path."),
+            id: numberProp("Campaign id."),
+            status: stringProp("completed, blocked, or superseded. Defaults to completed."),
+            summary: stringProp("Timeline event summary.")
+        }, ["root", "id"]),
+        handler: (input) => withDb(str(input.root), (db) => {
+            const id = num(input.id, 0);
+            db.updateCampaign({
+                id,
+                status: maybeCampaignStatus(input.status) ?? "completed",
+                eventSummary: maybeStr(input.summary) ?? "Campaign closed."
+            });
+            return { ok: true, id, campaign: db.getCampaign(id) };
+        })
+    },
+    {
+        name: "proteus_record_branch",
+        title: "Record Hypothesis Branch",
+        description: "Record an explicit hypothesis-tree branch with attack primitive, steps, controls, kill conditions, ROI, and status.",
+        inputSchema: schema({
+            root: stringProp("Target root path."),
+            campaignId: numberProp("Campaign id."),
+            roundId: numberProp("Round id."),
+            surfaceId: numberProp("Surface id."),
+            title: stringProp("Branch title."),
+            hypothesis: stringProp("Hypothesis text."),
+            attackPrimitive: stringProp("Attack primitive."),
+            whyNonObvious: stringProp("Why this branch is non-obvious."),
+            preconditions: arrayProp("Preconditions."),
+            steps: arrayProp("Steps."),
+            successCriteria: arrayProp("Success criteria."),
+            negativeControls: arrayProp("Negative controls."),
+            killConditions: arrayProp("Kill conditions."),
+            roi: objectProp("Branch ROI object."),
+            status: stringProp("open, testing, killed, promoted, or blocked.")
+        }, ["root", "title"]),
+        handler: (input) => withDb(str(input.root), (db) => ({
+            ok: true,
+            id: db.addHypothesisBranch({
+                campaignId: maybeNum(input.campaignId),
+                roundId: maybeNum(input.roundId),
+                surfaceId: maybeNum(input.surfaceId),
+                title: str(input.title),
+                hypothesis: maybeStr(input.hypothesis) ?? str(input.title),
+                attackPrimitive: maybeStr(input.attackPrimitive) ?? "unknown",
+                whyNonObvious: maybeStr(input.whyNonObvious) ?? "",
+                preconditions: stringArray(input.preconditions),
+                steps: stringArray(input.steps),
+                successCriteria: stringArray(input.successCriteria),
+                negativeControls: stringArray(input.negativeControls),
+                killConditions: stringArray(input.killConditions),
+                roi: (objectValue(input.roi) ?? {}),
+                status: maybeBranchStatus(input.status) ?? "open"
+            })
+        }))
+    },
+    {
+        name: "proteus_link_entities",
+        title: "Link Entities",
+        description: "Create a durable relation between two Proteus records, such as campaign has_round round or branch supported_by evidence.",
+        inputSchema: schema({
+            root: stringProp("Target root path."),
+            fromType: stringProp("Source entity type."),
+            fromId: numberProp("Source entity id."),
+            toType: stringProp("Target entity type."),
+            toId: numberProp("Target entity id."),
+            relation: stringProp("Relation label."),
+            confidence: numberProp("Confidence 0-1."),
+            note: stringProp("Short note.")
+        }, ["root", "fromType", "fromId", "toType", "toId", "relation"]),
+        handler: (input) => withDb(str(input.root), (db) => ({
+            ok: true,
+            id: db.addEntityLink({
+                fromType: str(input.fromType),
+                fromId: num(input.fromId, 0),
+                toType: str(input.toType),
+                toId: num(input.toId, 0),
+                relation: str(input.relation),
+                confidence: num(input.confidence, 1),
+                note: maybeStr(input.note)
+            })
+        }))
+    },
+    {
         name: "proteus_roles",
         title: "List Proteus Roles",
         description: "Return Proteus specialist roles and their output contracts.",
@@ -150,11 +297,11 @@ const tools = [
     {
         name: "proteus_list_records",
         title: "List Memory Records",
-        description: "List structured Proteus records by type: surfaces, hypotheses, evidence, decisions, gates, or rounds.",
+        description: "List structured Proteus records by type: surfaces, hypotheses, evidence, decisions, gates, rounds, campaigns, branches, or links.",
         inputSchema: schema({
             root: stringProp("Target root path."),
-            recordType: stringProp("surfaces, hypotheses, evidence, decisions, gates, or rounds."),
-            status: stringProp("Optional status filter for surfaces, hypotheses, or rounds."),
+            recordType: stringProp("surfaces, hypotheses, evidence, decisions, gates, rounds, campaigns, branches, or links."),
+            status: stringProp("Optional status filter for surfaces, hypotheses, rounds, campaigns, or branches."),
             text: stringProp("Optional text filter for surfaces."),
             entityType: stringProp("Optional entity type filter for gates."),
             entityId: numberProp("Optional entity id filter for gates."),
@@ -658,7 +805,27 @@ function listRecords(db, recordType, options) {
             .filter((row) => !options.status || row.status === options.status)
             .slice(0, options.limit);
     }
-    throw new Error("recordType must be one of: surfaces, hypotheses, evidence, decisions, gates, rounds");
+    if (recordType === "campaigns") {
+        return db.listCampaigns(options.status ? parseCampaignStatus(options.status) : undefined).slice(0, options.limit);
+    }
+    if (recordType === "branches" || recordType === "hypothesis_branches") {
+        return db
+            .listHypothesisBranches({
+            campaignId: options.entityType === "campaign" ? options.entityId : undefined,
+            roundId: options.entityType === "round" ? options.entityId : undefined,
+            status: options.status ? parseBranchStatus(options.status) : undefined,
+            limit: options.limit
+        })
+            .slice(0, options.limit);
+    }
+    if (recordType === "links" || recordType === "entity_links") {
+        return db.listEntityLinks({
+            entityType: options.entityType,
+            entityId: options.entityId,
+            limit: options.limit
+        });
+    }
+    throw new Error("recordType must be one of: surfaces, hypotheses, evidence, decisions, gates, rounds, campaigns, branches, links");
 }
 function schema(properties, required = []) {
     return { type: "object", properties, required, additionalProperties: true };
@@ -713,6 +880,32 @@ function parseRoundStatus(status) {
         return status;
     }
     throw new Error("Round status must be one of: active, paused, completed, blocked, planned, superseded");
+}
+function maybeCampaignStatus(value) {
+    if (value === undefined || value === null)
+        return undefined;
+    return parseCampaignStatus(str(value));
+}
+function parseCampaignStatus(status) {
+    if (status === "active" ||
+        status === "paused" ||
+        status === "completed" ||
+        status === "blocked" ||
+        status === "superseded") {
+        return status;
+    }
+    throw new Error("Campaign status must be one of: active, paused, completed, blocked, superseded");
+}
+function maybeBranchStatus(value) {
+    if (value === undefined || value === null)
+        return undefined;
+    return parseBranchStatus(str(value));
+}
+function parseBranchStatus(status) {
+    if (status === "open" || status === "testing" || status === "killed" || status === "promoted" || status === "blocked") {
+        return status;
+    }
+    throw new Error("Branch status must be one of: open, testing, killed, promoted, blocked");
 }
 function stringArray(value) {
     return Array.isArray(value) ? value.filter((item) => typeof item === "string") : [];

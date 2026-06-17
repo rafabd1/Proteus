@@ -117,6 +117,25 @@ export const ROLES: Record<AgentCodename, RoleDefinition> = {
       "required rebuttal evidence",
       "verdict: reportable, watchlist, or discarded"
     ]
+  },
+  cicada: {
+    codename: "cicada",
+    displayName: "Cicada",
+    family: "exploit-development-bypass-chaining",
+    purpose:
+      "Strengthen promising signals into realistic exploit strategies by reducing blockers, designing bypass paths, and clarifying chain requirements without promoting unvalidated claims.",
+    startsWhen:
+      "A branch already has concrete signal but still needs bypass design, chaining, exploit reliability, impact proof, or a lab-grade PoC path.",
+    requiredOutput: [
+      "current primitive and blockers",
+      "bypass candidates",
+      "chain paths",
+      "minimal reliable PoC plan",
+      "impact preconditions",
+      "evidence needed",
+      "kill conditions",
+      "contract signature"
+    ]
   }
 };
 
@@ -127,5 +146,6 @@ export const ROLE_ORDER: AgentCodename[] = [
   "libris",
   "mimic",
   "artificer",
-  "skeptic"
+  "skeptic",
+  "cicada"
 ];
