@@ -1,8 +1,8 @@
 # Report Draft Template
 
 Write this for the triager, not for internal notes. A human with zero prior
-context should quickly understand the flaw, why it matters, and how to reproduce
-it.
+context should quickly understand the flaw, its concrete impact, and how to
+reproduce it.
 
 If the user, program, or platform provides a report template or custom
 instructions, follow that structure first. Do not add extra sections that are
@@ -15,8 +15,13 @@ heavy formatting: short paragraphs, only useful bullets, and no long sections
 unless the evidence genuinely requires them.
 
 Do not mention internal workspace paths, agent roles, memory files, Proteus, or
-research workflow. Avoid em dashes, filler, generic hype, and phrases such as
-"this is not about X, it is about Y".
+research workflow. When adjusting a draft, write the external report text
+itself, not a response to the user or a note about local work.
+
+Avoid common LLM report habits: em dashes, filler, generic hype, defensive
+phrasing, unnecessary caveats, and reframing phrases such as "this is not about
+X, it is about Y". Do not use headings or stock transitions like "Why this
+matters", "This matters", or "This is security relevant because".
 
 ## Title
 
@@ -62,13 +67,18 @@ behavior better.
 
 ## Steps To Reproduce
 
+Keep each step terse: action title plus expected output. Do not put long,
+redundant explanations inside the steps. Put output interpretation in PoC
+Details or in a short note after the steps, without repeating the same proof.
+
 1.
 
 ## Impact
 
-Describe the realistic attacker scenario, the victim resources affected, and the
-security consequence. Keep it concrete and proportional. Avoid abstract severity
-language unless the program asks for it.
+Prefer bullet points. List concrete impacts: realistic attacker scenario, victim
+resources affected, and security consequence. Do not use Impact to explain
+caveats, prerequisites, reframing, or why the issue matters. Put necessary
+requirements in Summary or PoC Details instead.
 
 Add other sections only when the program template requires them or when the
 triage context specifically needs them.

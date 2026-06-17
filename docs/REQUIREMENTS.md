@@ -211,13 +211,22 @@ Requirements:
   fields instead of turning validation gates into a visible checklist;
 - avoid legalistic tone, long bullet lists, questionnaire-style writing, and
   report text that feels artificially generated;
-- avoid LLM-style phrasing, em dashes, filler, and generic hype;
+- avoid LLM-style phrasing, em dashes, filler, defensive caveats, generic hype,
+  and stock reframing such as "this is not about X, it is about Y";
+- avoid stock headings or transitions such as "Why this matters", "This
+  matters", and "This is security relevant because";
 - do not mention Proteus, `.vros`, internal workspace paths, memory, or agent
   roles in the submitted report;
+- when adjusting a report, write the external triage text itself instead of
+  answering the user or preserving local workspace context;
 - explain root cause simply enough for a reader with no prior context;
 - explain impact through a realistic high-impact attacker scenario;
+- prefer bullet points in Impact, listing concrete impacts only, without
+  caveats, prerequisites, or defensive reframing;
 - prefer manual blackbox reproduction steps using browser actions, HTTP
   requests, `curl`, or normal CLI commands when possible;
+- keep each reproduction step to an action title and expected output, placing
+  output interpretation in PoC Details or immediately after the steps;
 - if automation is used, explain the manual sequence it represents;
 - include short PoC snippets only when they clarify the reproduction;
 - explain what each snippet does and what output proves the issue.

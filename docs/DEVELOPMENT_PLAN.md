@@ -223,6 +223,11 @@ internal workflow references, and prefer manual blackbox reproduction steps such
 as `curl`, HTTP requests, browser actions, or normal CLI usage. Automated PoCs
 are acceptable only when the manual flow is explained clearly.
 
+Report drafts should avoid LLM-style defensive reframing, unnecessary caveats,
+em dashes, generic hype, and stock "why this matters" phrasing. Impact should
+prefer concrete bullet points, while reproduction steps should stay to action
+title plus expected output with interpretation outside the numbered steps.
+
 ### Skeptic: Devil's Advocate
 
 Skeptic tries to refute the finding. It searches for expected behavior,

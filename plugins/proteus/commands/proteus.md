@@ -141,6 +141,23 @@ caveats, generic hype, and phrases like "this is not about X, it is about Y".
 Do not mention Proteus, `.vros`, Claude subagents, workspace paths, memory
 records, or internal workflow in a submitted report.
 
+When adjusting a report, write the final report text for the external triager.
+Do not answer the user, narrate the edit, cite local workspace details, or keep
+context that only exists in the local research session.
+
+Avoid common LLM habits: defensive phrasing, unnecessary caveats, reframing the
+Impact section around what the issue is not, headings or transitions like "Why
+this matters", "This matters", or "This is security relevant because", and em
+dashes.
+
+Impact should preferably be bullet points listing concrete impacts only. Do not
+use Impact to explain prerequisites, caveats, or why the bug is security
+relevant. Put necessary conditions in the Summary, PoC Details, or Limitations.
+
+Steps To Reproduce should keep each step to an action title and expected output.
+Do not include long redundant explanations in the numbered steps. Put output
+interpretation in PoC Details or immediately after the steps.
+
 Prefer manual blackbox reproduction with browser actions, HTTP requests, `curl`,
 or normal CLI commands. If automation is necessary, explain the manual flow it
 represents and include only short snippets that clarify the proof.

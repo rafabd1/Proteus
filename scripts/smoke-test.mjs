@@ -476,7 +476,15 @@ try {
       throw new Error(`report draft missing expected section: ${section}`);
     }
   }
-  for (const guidance of ["follow that structure first", "should not read like a legal document", "Anticipate the triager's likely questions organically"]) {
+  for (const guidance of [
+    "follow that structure first",
+    "should not read like a legal document",
+    "Anticipate the triager's likely questions organically",
+    "When adjusting a draft, write the external report text",
+    "Do not use headings or stock transitions like \"Why this matters\"",
+    "Do not put long, redundant explanations inside the steps",
+    "Impact should preferably be bullet points"
+  ]) {
     if (!reportDraft.includes(guidance)) {
       throw new Error(`report draft missing writing guidance: ${guidance}`);
     }

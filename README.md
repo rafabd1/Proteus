@@ -330,6 +330,14 @@ only when the program template requires them or the triage context specifically
 needs them. Avoid internal references to Proteus, `.vros`, subagents, workspace
 paths, or research process.
 
+Report prose should avoid common LLM habits: defensive reframing, unnecessary
+caveats, em dashes, generic hype, and stock phrases such as "this is not about
+X, it is about Y", "Why this matters", "This matters", or "This is security
+relevant because". Impact should preferably be concise bullet points listing
+concrete consequences, not prerequisites or caveats. Steps should stay terse:
+action title plus expected output, with output interpretation placed in PoC
+Details or a short note after the steps.
+
 PoCs should prefer manual reproduction when possible: browser actions, HTTP
 requests, `curl`, normal CLI commands, or other blackbox steps an attacker could
 realistically perform. If automation is necessary, the report should explain the

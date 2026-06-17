@@ -193,7 +193,11 @@ Responsibilities:
 - generate PoC README files;
 - generate report drafts only after gates pass;
 - keep report drafts triage-ready, concise, natural, and free of internal
-  Proteus/workspace/process references.
+  Proteus/workspace/process references;
+- enforce anti-pattern guidance against LLM-style defensive reframing,
+  unnecessary caveats, em dashes, generic hype, verbose reproduction steps, and
+  Impact sections that explain prerequisites instead of listing concrete
+  consequences.
 
 Exports are views of memory, not the primary state.
 

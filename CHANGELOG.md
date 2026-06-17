@@ -14,6 +14,7 @@
 - Modular Proteus skills for chaining, fuzzing, codebase research, web intel, web research, PoC/exploit work, and checkpoints.
 - Expanded individual skill contracts with professional heuristics for non-obvious chaining, calibrated fuzzing, active codebase learning, realistic PoCs, and intelligence-driven pivots.
 - Strengthened report-writing guidance to follow supplied templates, avoid artificial checklist/legalistic prose, and write concise triage-ready summaries for readers with no prior context.
+- Added report anti-pattern guardrails for common LLM phrasing, defensive caveats, Impact-section reframing, verbose reproduction steps, local workspace leakage, and adjustment replies that are not written for an external triager.
 - Cicada specialist role for advanced exploit development, bypass work, and chaining on already-promising targets.
 - Shared base research contract requiring realistic exploitability, anti-slop validation, dedupe, public-known checks, and explicit contract attestation.
 - GitHub Actions CI and tag-based release automation for `v*` tags.

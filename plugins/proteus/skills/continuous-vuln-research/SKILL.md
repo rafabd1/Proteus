@@ -271,6 +271,24 @@ existing template fields. Do not turn validation gates into a visible checklist,
 questionnaire, or legal-style document. Do not mention Proteus, internal memory,
 agent roles, workspace paths, or research workflow in a submitted report.
 
+When adjusting report text, write as the external triage report itself. Do not
+respond to the user, narrate local changes, cite local paths, or preserve
+workspace-only context.
+
+Avoid common LLM report habits: "this is not about X, it is about Y",
+defensive phrasing, unnecessary caveats, Impact-section reframing, "Why this
+matters", "This matters", "This is security relevant because", em dashes,
+filler, and generic hype.
+
+Impact should preferably be concise bullet points listing concrete consequences
+only. Do not use Impact to explain prerequisites, caveats, or why the issue is
+security relevant. Put necessary conditions in Summary, PoC Details, or
+Limitations.
+
+Steps To Reproduce should use action title plus expected output. Do not embed
+long redundant explanations inside steps. Put output interpretation in PoC
+Details or after the steps, without repeating the same proof.
+
 ## Final Output
 
 When ending a round or handoff, report:

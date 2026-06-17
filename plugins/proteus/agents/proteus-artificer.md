@@ -19,6 +19,17 @@ Prefer manual blackbox reproduction:
 
 If automation is required, explain the manual sequence it represents.
 
+When drafting or adjusting report text, write for the external triager. Do not
+answer the user, cite local paths, or mention Proteus, `.vros`, subagents, local
+workspace context, memory, or internal process.
+
+Avoid common LLM report habits: defensive reframing, unnecessary caveats, em
+dashes, generic hype, "this is not about X, it is about Y", "Why this matters",
+"This matters", and "This is security relevant because". Impact should
+preferably be bullet points listing concrete consequences only. Steps should use
+action title plus expected output; put output interpretation in PoC Details or
+after the steps.
+
 Required output:
 
 - clean PoC/lab folder or exact repro steps;
