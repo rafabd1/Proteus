@@ -77,6 +77,7 @@ const tools = [
             markdown: booleanProp("Return Markdown instead of JSON.")
         }, ["root", "objective"]),
         handler: ({ root, objective, coordinatorPlan, currentUnderstanding, selectedSurfaces, skippedSurfaces, agentFronts, stopConditions, replanTrigger, status, markdown }) => withDb(str(root), (db) => {
+            const activeBefore = db.listRounds().filter((round) => round.status === "active");
             const plan = (0, planner_1.planRound)(db, {
                 objective: str(objective),
                 status: maybeRoundStatus(status),
@@ -88,7 +89,22 @@ const tools = [
                 stopConditions: Array.isArray(stopConditions) ? stringArray(stopConditions) : undefined,
                 replanTrigger: maybeStr(replanTrigger)
             });
-            return markdown === true ? (0, planner_1.renderRoundPlan)(plan) : plan;
+            const advisories = activeBefore.length > 0
+                ? [
+                    {
+                        severity: "warn",
+                        code: "active_round_exists",
+                        message: "There was already an active round before this plan was recorded. Resume or close stale work before splitting attention.",
+                        links: activeBefore.slice(0, 5).map((round) => ({ entityType: "round", entityId: round.id })),
+                        reason: "active rounds are operational goals and can cause repeated or divergent research state"
+                    }
+                ]
+                : [];
+            const record = markdown === true ? (0, planner_1.renderRoundPlan)(plan) : plan;
+            return toolEnvelope(record, {
+                advisories,
+                stateDelta: { created: [{ entityType: "round", entityId: plan.id }], linked: [], updated: [] }
+            });
         })
     },
     {
@@ -104,6 +120,7 @@ const tools = [
             recentLearningSummary: stringProp("Short recent-learning summary.")
         }, ["root", "title"]),
         handler: (input) => withDb(str(input.root), (db) => {
+            const activeBefore = db.listCampaigns("active");
             const id = db.addCampaign({
                 title: str(input.title),
                 objective: maybeStr(input.objective) ?? str(input.title),
@@ -111,7 +128,18 @@ const tools = [
                 currentStateSummary: maybeStr(input.currentStateSummary),
                 recentLearningSummary: maybeStr(input.recentLearningSummary)
             });
-            return { ok: true, id, campaign: db.getCampaign(id) };
+            const advisories = activeBefore.length > 0
+                ? [
+                    {
+                        severity: "warn",
+                        code: "active_campaign_exists",
+                        message: "Another active campaign already exists for this target. Resume it or explicitly keep both campaigns separate.",
+                        links: activeBefore.slice(0, 5).map((campaign) => ({ entityType: "campaign", entityId: campaign.id })),
+                        reason: "multiple active campaigns can dilute state recovery and duplicate work"
+                    }
+                ]
+                : [];
+            return toolEnvelope({ entityType: "campaign", entityId: id, campaign: db.getCampaign(id) }, { advisories, stateDelta: { created: [{ entityType: "campaign", entityId: id }], linked: [], updated: [] } });
         })
     },
     {
@@ -122,8 +150,17 @@ const tools = [
         handler: (input) => withDb(str(input.root), (db) => {
             const id = maybeNum(input.id) ?? db.listCampaigns("active")[0]?.id;
             if (!id)
-                return { ok: true, campaign: null, message: "No active campaign found." };
-            return { ok: true, ...db.campaignDigest(id) };
+                return toolEnvelope(null, {
+                    advisories: [
+                        {
+                            severity: "info",
+                            code: "no_active_campaign",
+                            message: "No active campaign was found for this target.",
+                            reason: "create a campaign before expecting campaign-scoped recall"
+                        }
+                    ]
+                });
+            return toolEnvelope(db.campaignDigest(id));
         })
     },
     {
@@ -147,7 +184,7 @@ const tools = [
                 recentLearningSummary: maybeStr(input.recentLearningSummary),
                 eventSummary: maybeStr(input.summary) ?? "Campaign checkpoint recorded."
             });
-            return { ok: true, id, campaign: db.getCampaign(id) };
+            return toolEnvelope({ entityType: "campaign", entityId: id, campaign: db.getCampaign(id) }, { stateDelta: { created: [], linked: [], updated: [{ entityType: "campaign", entityId: id }] } });
         })
     },
     {
@@ -167,7 +204,7 @@ const tools = [
                 status: maybeCampaignStatus(input.status) ?? "completed",
                 eventSummary: maybeStr(input.summary) ?? "Campaign closed."
             });
-            return { ok: true, id, campaign: db.getCampaign(id) };
+            return toolEnvelope({ entityType: "campaign", entityId: id, campaign: db.getCampaign(id) }, { stateDelta: { created: [], linked: [], updated: [{ entityType: "campaign", entityId: id }] } });
         })
     },
     {
@@ -191,9 +228,8 @@ const tools = [
             roi: objectProp("Branch ROI object."),
             status: stringProp("open, testing, killed, promoted, or blocked.")
         }, ["root", "title"]),
-        handler: (input) => withDb(str(input.root), (db) => ({
-            ok: true,
-            id: db.addHypothesisBranch({
+        handler: (input) => withDb(str(input.root), (db) => {
+            const id = db.addHypothesisBranch({
                 campaignId: maybeNum(input.campaignId),
                 roundId: maybeNum(input.roundId),
                 surfaceId: maybeNum(input.surfaceId),
@@ -208,8 +244,12 @@ const tools = [
                 killConditions: stringArray(input.killConditions),
                 roi: (objectValue(input.roi) ?? {}),
                 status: maybeBranchStatus(input.status) ?? "open"
-            })
-        }))
+            });
+            return toolEnvelope({ entityType: "hypothesis_branch", entityId: id }, {
+                advisories: activeCampaignAdvisories(db),
+                stateDelta: { created: [{ entityType: "hypothesis_branch", entityId: id }], linked: [], updated: [] }
+            });
+        })
     },
     {
         name: "proteus_link_entities",
@@ -225,9 +265,8 @@ const tools = [
             confidence: numberProp("Confidence 0-1."),
             note: stringProp("Short note.")
         }, ["root", "fromType", "fromId", "toType", "toId", "relation"]),
-        handler: (input) => withDb(str(input.root), (db) => ({
-            ok: true,
-            id: db.addEntityLink({
+        handler: (input) => withDb(str(input.root), (db) => {
+            const id = db.addEntityLink({
                 fromType: str(input.fromType),
                 fromId: num(input.fromId, 0),
                 toType: str(input.toType),
@@ -235,8 +274,20 @@ const tools = [
                 relation: str(input.relation),
                 confidence: num(input.confidence, 1),
                 note: maybeStr(input.note)
-            })
-        }))
+            });
+            return toolEnvelope({ entityType: "entity_link", entityId: id }, {
+                stateDelta: {
+                    created: [],
+                    linked: [
+                        {
+                            entityType: "entity_link",
+                            entityId: id
+                        }
+                    ],
+                    updated: []
+                }
+            });
+        })
     },
     {
         name: "proteus_roles",
@@ -367,24 +418,49 @@ const tools = [
             killCriteria: stringProp(),
             revisitCondition: stringProp()
         }, ["root", "title"]),
-        handler: (input) => withDb(str(input.root), (db) => ({
-            ok: true,
-            id: db.addHypothesis({
+        handler: (input) => withDb(str(input.root), (db) => {
+            const hypothesis = {
                 surfaceId: maybeNum(input.surfaceId),
                 title: str(input.title),
                 primitive: maybeStr(input.primitive) ?? "unknown",
                 attackerBoundary: maybeStr(input.attackerBoundary) ?? "unknown",
                 impactClaim: maybeStr(input.impactClaim) ?? "unknown",
                 heuristicFamily: maybeStr(input.heuristicFamily) ?? "unknown",
-                status: maybeStr(input.status) === undefined ? "live" : maybeStr(input.status),
+                status: (maybeStr(input.status) === undefined ? "live" : maybeStr(input.status)),
                 score: num(input.score, 0),
                 duplicateRisk: 5,
                 expectedBehaviorRisk: 5,
                 validationCost: 5,
                 killCriteria: maybeStr(input.killCriteria) ?? "",
                 revisitCondition: maybeStr(input.revisitCondition) ?? ""
-            })
-        }))
+            };
+            const id = db.addHypothesis(hypothesis);
+            const similar = db
+                .search(`${hypothesis.title} ${hypothesis.primitive} ${hypothesis.attackerBoundary} ${hypothesis.impactClaim}`, 8)
+                .filter((row) => !(row.entityType === "hypothesis" && row.entityId === id))
+                .slice(0, 5);
+            const advisories = similar.length > 0
+                ? [
+                    {
+                        severity: "warn",
+                        code: "similar_records_found",
+                        message: "Similar memory records exist. Read them before investing more in this hypothesis.",
+                        links: similar.map((row) => ({ entityType: row.entityType, entityId: row.entityId })),
+                        reason: "matched current hypothesis title, primitive, attacker boundary, or impact terms"
+                    }
+                ]
+                : activeCampaignAdvisories(db);
+            return toolEnvelope({ entityType: "hypothesis", entityId: id }, {
+                advisories,
+                relatedRecords: similar,
+                nextSuggestedReads: similar.map((row) => ({
+                    tool: "proteus_get_record",
+                    entityType: row.entityType,
+                    entityId: row.entityId
+                })),
+                stateDelta: { created: [{ entityType: "hypothesis", entityId: id }], linked: [], updated: [] }
+            });
+        })
     },
     {
         name: "proteus_record_evidence",
@@ -422,17 +498,30 @@ const tools = [
             evidenceIds: arrayProp(),
             actor: stringProp()
         }, ["root", "entityType", "entityId", "decision", "reason"]),
-        handler: (input) => withDb(str(input.root), (db) => ({
-            ok: true,
-            id: db.addDecision({
+        handler: (input) => withDb(str(input.root), (db) => {
+            const evidenceIds = numberArray(input.evidenceIds);
+            const id = db.addDecision({
                 entityType: str(input.entityType),
                 entityId: num(input.entityId, 0),
                 decision: str(input.decision),
                 reason: str(input.reason),
-                evidenceIds: numberArray(input.evidenceIds),
+                evidenceIds,
                 actor: maybeStr(input.actor) ?? "coordinator"
-            })
-        }))
+            });
+            const decision = str(input.decision).toLowerCase();
+            const isHighImpactDecision = ["promote", "promoted", "report", "reportable", "candidate", "kill", "killed", "discard", "discarded"].some((term) => decision.includes(term));
+            const advisories = [];
+            if (isHighImpactDecision && evidenceIds.length === 0) {
+                advisories.push({
+                    severity: "warn",
+                    code: "decision_without_evidence",
+                    message: "This decision has no evidence ids attached. Add evidence before relying on it as a campaign memory anchor.",
+                    links: [{ entityType: str(input.entityType), entityId: num(input.entityId, 0) }],
+                    reason: "promotion, kill, or candidate decisions should remain auditable"
+                });
+            }
+            return toolEnvelope({ entityType: "decision", entityId: id }, { advisories, stateDelta: { created: [{ entityType: "decision", entityId: id }], linked: [], updated: [] } });
+        })
     },
     {
         name: "proteus_record_gate",
@@ -721,6 +810,53 @@ function handleLine(line) {
 function toToolResult(value) {
     const text = typeof value === "string" ? value : JSON.stringify(value, null, 2);
     return { content: [{ type: "text", text }] };
+}
+function toolEnvelope(record, extras = {}) {
+    return {
+        ok: true,
+        record,
+        advisories: extras.advisories ?? [],
+        relatedRecords: extras.relatedRecords ?? [],
+        nextSuggestedReads: extras.nextSuggestedReads ?? [],
+        stateDelta: {
+            created: extras.stateDelta?.created ?? [],
+            linked: extras.stateDelta?.linked ?? [],
+            updated: extras.stateDelta?.updated ?? []
+        }
+    };
+}
+function activeCampaignAdvisories(db) {
+    const campaigns = db.listCampaigns("active");
+    if (campaigns.length === 0) {
+        return [
+            {
+                severity: "info",
+                code: "no_active_campaign",
+                message: "No active campaign is linked to this action. Create or resume a campaign for stronger state recovery.",
+                reason: "campaign-scoped state lets future agents recover recent context without broad memory search"
+            }
+        ];
+    }
+    if (campaigns.length > 1) {
+        return [
+            {
+                severity: "warn",
+                code: "multiple_active_campaigns",
+                message: "Multiple active campaigns exist for this target. Pick one explicitly to avoid fragmented state.",
+                links: campaigns.slice(0, 5).map((campaign) => ({ entityType: "campaign", entityId: campaign.id })),
+                reason: "multiple active campaign containers can cause duplicate branches and stale checkpoints"
+            }
+        ];
+    }
+    return [
+        {
+            severity: "info",
+            code: "active_campaign_available",
+            message: "An active campaign exists; link this record if it belongs to the current research thread.",
+            links: [{ entityType: "campaign", entityId: campaigns[0].id }],
+            reason: "campaign links improve resume and checkpoint quality"
+        }
+    ];
 }
 function sendResult(id, result) {
     node_process_1.default.stdout.write(JSON.stringify({ jsonrpc: "2.0", id, result }) + "\n");
