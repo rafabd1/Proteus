@@ -98,8 +98,9 @@ Before launching Chimera agents:
 - define a narrow role, goal, expected artifact, and stop conditions;
 - make the goal and stop conditions explicit enough that the agent can keep
   working until completion or a real blocker without guessing when to stop;
-- check `proteus chimera list` before creating new agents and prefer reusing an
-  existing relevant `CH-...` lab with `proteus chimera run --id <CH-ID>`;
+- check `proteus chimera list` before creating new agents; inspect role, goal,
+  status, `labDir`, and `opencodeSessionId`, then prefer reusing an existing
+  relevant `CH-...` lab with `proteus chimera run --id <CH-ID>`;
 - choose the access mode deliberately.
 
 Access modes:
@@ -125,6 +126,16 @@ Coordinator duties:
 - poll unread messages with `proteus chimera poll --unread`;
 - send redirects with `proteus chimera send`; use `--priority` when the message
   should steer an active OpenCode session immediately;
+- understand that `--priority` can directly ping OpenCode with `delivery=steer`
+  only after the Chimera session has an attached `opencodeSessionId`; if missing,
+  run the existing `CH-...` once or attach the OpenCode session explicitly;
+- treat `proteus chimera poll` as the authoritative Proteus broker history:
+  coordinator messages, agent posts, snapshots, heartbeat, kill/close events,
+  and latest snapshots. It is not the full raw OpenCode chat transcript;
+- when the raw OpenCode session history is needed, use the stored
+  `opencodeSessionId` with OpenCode's own export/session APIs, for example
+  `opencode export <ses_id>`, and keep any imported conclusions summarized back
+  into Proteus messages or snapshots;
 - kill looping or low-ROI sessions with `proteus chimera kill`;
 - close sessions with a verdict and summary;
 - independently validate any agent claim before recording it as a finding.
