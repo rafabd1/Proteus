@@ -84,8 +84,8 @@ export type ChimeraStatus =
   | "timeout";
 
 export type ChimeraAccessMode =
-  | "lab"
-  | "inherit";
+  | "explorer"
+  | "editor";
 
 export type ChimeraMessageDirection =
   | "coordinator_to_agent"

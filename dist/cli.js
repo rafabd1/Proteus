@@ -1216,10 +1216,10 @@ function parseBranchStatus(status) {
     throw new Error("Branch status must be one of: open, testing, killed, promoted, blocked");
 }
 function chimeraAccessMode(parsed) {
-    const access = getString(parsed, "access") ?? "lab";
-    if (access === "lab" || access === "inherit")
+    const access = getString(parsed, "access") ?? "explorer";
+    if (access === "explorer" || access === "editor")
         return access;
-    throw new Error("Chimera access must be one of: lab, inherit");
+    throw new Error("Chimera access must be one of: explorer, editor");
 }
 function chimeraMessageKind(parsed, key, fallback) {
     const kind = getString(parsed, key) ?? fallback;

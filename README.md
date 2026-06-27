@@ -245,13 +245,16 @@ proteus chimera kill --root C:\path\to\target --id CH-0001 --reason "Looping wit
 proteus chimera close --root C:\path\to\target --id CH-0001 --verdict watchlist --summary "Useful ideas, no validated PoC yet"
 ```
 
-Chimera agents default to `--access lab`, meaning repository writes are out of
-scope and research artifacts go into that agent's private `.vros/chimera` lab.
-The coordinator can grant inherited workspace permissions only when needed or
-explicitly instructed:
+Chimera agents default to `--access explorer`, meaning repository writes are out
+of scope and research artifacts go into that agent's private `.vros/chimera`
+lab. The coordinator can grant editor access only when needed or explicitly
+instructed, and must describe shell/edit restrictions in `--access-notes`.
+Agents are instructed to create/edit files only inside their own Chimera lab
+unless editor restrictions explicitly name another allowed workspace path and
+action:
 
 ```powershell
-proteus chimera start --root C:\path\to\target --role cicada --goal "Try bypass/chaining on branch B7" --access inherit --access-notes "Coordinator grants edit/run access for isolated exploit lab work"
+proteus chimera start --root C:\path\to\target --role cicada --goal "Try bypass/chaining on branch B7" --access editor --access-notes "Allowed: edit only .vros/chimera lab and generated PoC harness files; shell may run targeted tests and non-destructive probes; ask before workspace source edits."
 ```
 
 Swarm mode starts multiple independent agents from a small JSON plan:
@@ -452,7 +455,7 @@ proteus merge --root <dest-root> --source <source-root|.vros|memory.sqlite> [--s
 proteus chimera config init|show|disable [--opencode-command <cmd>] [--server-url <url>] [--model <provider/model>] [--variant <variant>]
 proteus chimera doctor [--root <path>]
 proteus chimera stop-server [--root <path>]
-proteus chimera start --role <role> --goal <text> [--access lab|inherit] [--access-notes <text>] [--run]
+proteus chimera start --role <role> --goal <text> [--access explorer|editor] [--access-notes <text>] [--run]
 proteus chimera swarm --plan <json>
 proteus chimera run --id <CH-ID>
 proteus chimera attach-opencode --id <CH-ID> --server-url <url> --opencode-session-id <ses-id>

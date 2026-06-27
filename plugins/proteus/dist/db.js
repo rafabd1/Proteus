@@ -640,7 +640,7 @@ class ProteusDb {
            access_mode, access_notes, model, provider, session_dir, lab_dir, opencode_command, opencode_pid,
            opencode_server_url, opencode_session_id, created_at, updated_at, closed_at, close_verdict, close_summary)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-            .run(publicId, target.id, input.campaignId ?? null, input.roundId ?? null, input.role, input.goal, "starting", input.accessMode ?? "lab", input.accessNotes ?? null, input.model ?? null, input.provider ?? null, input.sessionDir, input.labDir, input.opencodeCommand ?? null, null, input.opencodeServerUrl ?? null, input.opencodeSessionId ?? null, now, now, null, null, null);
+            .run(publicId, target.id, input.campaignId ?? null, input.roundId ?? null, input.role, input.goal, "starting", input.accessMode ?? "explorer", input.accessNotes ?? null, input.model ?? null, input.provider ?? null, input.sessionDir, input.labDir, input.opencodeCommand ?? null, null, input.opencodeServerUrl ?? null, input.opencodeSessionId ?? null, now, now, null, null, null);
         const id = Number(result.lastInsertRowid);
         this.indexFts("chimera_session", id, `${publicId}\n${input.role}\n${input.goal}\n${input.model ?? ""}`);
         return this.getChimeraSession(publicId);
@@ -1902,9 +1902,9 @@ function normalizeChimeraStatus(value) {
     return value.length > 0 ? "failed" : "starting";
 }
 function normalizeChimeraAccessMode(value) {
-    if (value === "inherit")
-        return "inherit";
-    return "lab";
+    if (value === "editor")
+        return "editor";
+    return "explorer";
 }
 function normalizeChimeraMessageDirection(value) {
     if (value === "coordinator_to_agent" || value === "agent_to_coordinator" || value === "system")

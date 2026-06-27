@@ -91,22 +91,28 @@ bypass Proteus gates.
 
 ## Access Modes
 
-Default access is `lab`:
+Default access is `explorer`:
 
 ```powershell
 proteus chimera start --root C:\path\to\target --role explorer --goal "Map side effects around branch B7"
 ```
 
-In `lab` mode, repository writes are out of scope and artifacts belong in the
-session lab. The agent may read the workspace as needed for the assigned task.
+In `explorer` mode, repository writes are out of scope and artifacts belong in
+the session lab. The agent may read the workspace and use shell for read-only
+inspection and lab-local scripts.
 
-Inherited access is explicit:
+Editor access is explicit:
 
 ```powershell
-proteus chimera start --root C:\path\to\target --role cicada --goal "Try bypass/chaining on branch B7" --access inherit --access-notes "Coordinator grants edit/run access for isolated exploit lab work"
+proteus chimera start --root C:\path\to\target --role cicada --goal "Try bypass/chaining on branch B7" --access editor --access-notes "Allowed: edit only .vros/chimera lab and generated PoC harness files; shell may run targeted tests and non-destructive probes; ask before workspace source edits."
 ```
 
-Use inherited access only when the task needs it or the user grants it.
+Use editor access only when the task needs it or the user grants it.
+`--access-notes` is required for editor mode and should define allowed paths,
+shell boundaries, destructive-command limits, network expectations, test/lab
+scope, and whether workspace source edits are allowed. Even in editor mode, the
+agent is instructed to create/edit files only inside its Chimera lab unless the
+restrictions explicitly name another allowed workspace path and action.
 
 ## Messages
 

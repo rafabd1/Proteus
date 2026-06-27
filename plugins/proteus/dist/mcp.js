@@ -135,8 +135,8 @@ const tools = [
             root: stringProp("Target root path."),
             role: stringProp("Role such as chaining, fuzzing, codebase-research, cicada, explorer, or custom."),
             goal: stringProp("Bounded agent goal."),
-            access: stringProp("lab or inherit. Defaults to lab."),
-            accessNotes: stringProp("Why this access mode is needed."),
+            access: stringProp("explorer or editor. Defaults to explorer."),
+            accessNotes: stringProp("Explicit shell/edit restrictions. Required for editor access."),
             campaignId: numberProp("Campaign id."),
             roundId: numberProp("Round id."),
             model: stringProp("Runtime model override."),
@@ -1484,11 +1484,11 @@ function parseBranchStatus(status) {
 }
 function chimeraAccess(value) {
     if (value === undefined || value === null || value === "")
-        return "lab";
+        return "explorer";
     const access = str(value);
-    if (access === "lab" || access === "inherit")
+    if (access === "explorer" || access === "editor")
         return access;
-    throw new Error("Chimera access must be one of: lab, inherit");
+    throw new Error("Chimera access must be one of: explorer, editor");
 }
 function chimeraKind(value, fallback) {
     if (value === undefined || value === null || value === "")

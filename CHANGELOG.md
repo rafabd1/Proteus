@@ -21,6 +21,7 @@
 - Updated the main coordinator skill to explain when to use Chimera, how to check config, how to poll unread messages, and how to choose `lab` versus `inherit` access.
 - Updated README and Chimera docs with the official OpenCode project link, GLM-style model/variant target config, CLI examples, swarm usage, MCP tools, broadcast chat, and access-mode guidance.
 - Consolidated human docs by replacing redundant planning/update documents with the current technical Chimera reference.
+- Renamed Chimera access modes to `explorer` and `editor`; `editor` now requires explicit `--access-notes` restrictions, and co-agents are instructed to create/edit files only inside their own Chimera lab unless a specific workspace path and action is granted.
 - Expanded CLI and MCP smoke tests to cover Chimera config/start/post/poll/snapshot/heartbeat/kill/close/swarm flows.
 - Validated a real OpenCode run with `zai/glm-5.2`, `--variant high`, generated Chimera skills, Proteus CLI communication, snapshot creation, and unread polling.
 

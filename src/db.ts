@@ -1026,7 +1026,7 @@ export class ProteusDb {
         input.role,
         input.goal,
         "starting",
-        input.accessMode ?? "lab",
+        input.accessMode ?? "explorer",
         input.accessNotes ?? null,
         input.model ?? null,
         input.provider ?? null,
@@ -2783,8 +2783,8 @@ function normalizeChimeraStatus(value: string): ChimeraStatus {
 }
 
 function normalizeChimeraAccessMode(value: string): ChimeraAccessMode {
-  if (value === "inherit") return "inherit";
-  return "lab";
+  if (value === "editor") return "editor";
+  return "explorer";
 }
 
 function normalizeChimeraMessageDirection(value: string): ChimeraMessageDirection {

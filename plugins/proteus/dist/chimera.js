@@ -124,6 +124,11 @@ function startChimeraSession(db, input) {
     if (!config.enabled) {
         throw new Error("Chimera is disabled. Run `proteus chimera config init` first.");
     }
+    const accessMode = input.accessMode ?? "explorer";
+    const accessNotes = input.accessNotes?.trim() ?? "";
+    if (accessMode === "editor" && !accessNotes) {
+        throw new Error("Chimera editor access requires --access-notes with explicit shell/edit restrictions.");
+    }
     const publicId = nextPublicId(db);
     const sessionDir = (0, paths_1.chimeraSessionDir)(db.targetRoot, publicId);
     const labDir = node_path_1.default.join(sessionDir, "lab");
@@ -133,8 +138,8 @@ function startChimeraSession(db, input) {
         roundId: input.roundId ?? null,
         role: input.role.trim(),
         goal: input.goal.trim(),
-        accessMode: input.accessMode ?? "lab",
-        accessNotes: input.accessNotes ?? null,
+        accessMode,
+        accessNotes: accessNotes || null,
         model: input.model ?? config.defaultModel,
         provider: normalizeOpenCodeVariant(input.variant, input.provider, config.defaultVariant),
         sessionDir,
@@ -921,6 +926,8 @@ Required behavior:
 - Read dossier.md, contract.md, agent-instructions.md, and skills/*.md before acting.
 - Reconstruct the research context before substantial work: target, campaign/hypothesis, why this front exists, known killed paths, constraints, intended strategy, applicable Proteus heuristics, and expected output.
 - Respect access mode ${session.accessMode}: ${accessLine(session)}
+- Shell is available to Chimera sessions, but it is not blanket approval. Use shell only for the assigned research goal, obey the coordinator restrictions, avoid destructive commands, and keep generated artifacts in the Chimera lab.
+- By default, create and edit files only inside your own Chimera lab: ${(0, paths_1.toRelative)(db.targetRoot, session.labDir)}. Do not create, edit, move, or delete files elsewhere in the workspace unless editor-mode restrictions explicitly name the allowed path and action.
 - Use ${(0, paths_1.toRelative)(db.targetRoot, session.labDir)} for notes, scripts, PoC material, and evidence even when broader access is granted.
 - Prefer the workspace root as the Proteus base. Do not create stray .vros directories in subfolders.
 - If you accidentally find or create a stray base, report it. The coordinator can merge it with proteus merge.
@@ -982,10 +989,11 @@ ${accessLine(session)}
 `;
 }
 function accessLine(session) {
-    if (session.accessMode === "inherit") {
-        return `The coordinator granted inherited workspace permissions for this task. ${session.accessNotes || "Use the broader access only where it directly supports the goal."}`;
+    if (session.accessMode === "editor") {
+        return `Editor mode grants shell plus OpenCode edit permission. You still create/edit only inside the Chimera lab unless these coordinator restrictions explicitly name another allowed path and action: ${session.accessNotes}`;
     }
-    return `Keep repository writes out of scope and write only inside the Chimera lab unless the coordinator redirects you. ${session.accessNotes}`;
+    const notes = session.accessNotes ? ` Coordinator restrictions: ${session.accessNotes}` : "";
+    return `Explorer mode grants shell for read-only inspection and lab-local work, but repository edits are out of scope. Write notes, scripts, PoC material, and evidence only inside the Chimera lab.${notes}`;
 }
 function copySkillFiles(session) {
     const skillsDir = resolveSkillsDir();
@@ -1004,7 +1012,7 @@ function copySkillFiles(session) {
 }
 function writeOpenCodeAgentFile(session, config) {
     const agentName = config.defaultAgent ?? "proteus-chimera";
-    const permissions = session.accessMode === "inherit"
+    const permissions = session.accessMode === "editor"
         ? ["bash", "read", "edit", "glob", "grep", "webfetch", "websearch", "skill", "lsp"]
         : ["bash", "read", "glob", "grep", "webfetch", "websearch", "skill", "lsp"];
     const agent = `---
@@ -1018,9 +1026,9 @@ ${session.model ? `model: ${session.model}\n` : ""}permissions:
 
 Read the attached dossier and the local Proteus skills before acting. Your session id is ${session.publicId}.
 
-Operate through Proteus for coordination and memory. Use your Chimera lab for artifacts. Respect access mode ${session.accessMode}.
+Operate through Proteus for coordination and memory. Create and edit files only inside your Chimera lab unless editor-mode restrictions explicitly name another allowed path and action. Respect access mode ${session.accessMode}.
 
-Do not wait for interactive permission approval. If an action is outside your granted access or unclear, post a blocker through Proteus instead of asking OpenCode to prompt a human.
+Shell and edit permissions must follow the coordinator restrictions in dossier.md and contract.md. Do not wait for interactive permission approval. If an action is outside your granted access or unclear, post a blocker through Proteus instead of asking OpenCode to prompt a human.
 `;
     node_fs_1.default.writeFileSync(node_path_1.default.join(session.sessionDir, ".opencode", "agents", `${agentName}.md`), agent);
 }

@@ -1330,9 +1330,9 @@ function parseBranchStatus(status: string): BranchStatus {
 }
 
 function chimeraAccessMode(parsed: ParsedArgs): ChimeraAccessMode {
-  const access = getString(parsed, "access") ?? "lab";
-  if (access === "lab" || access === "inherit") return access;
-  throw new Error("Chimera access must be one of: lab, inherit");
+  const access = getString(parsed, "access") ?? "explorer";
+  if (access === "explorer" || access === "editor") return access;
+  throw new Error("Chimera access must be one of: explorer, editor");
 }
 
 function chimeraMessageKind(parsed: ParsedArgs, key: string, fallback: ChimeraMessageKind): ChimeraMessageKind {

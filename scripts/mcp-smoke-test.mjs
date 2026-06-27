@@ -230,13 +230,13 @@ try {
       root: tmpRoot,
       role: "chaining",
       goal: "MCP Chimera chain",
-      access: "inherit",
-      accessNotes: "MCP smoke coordinator grant"
+      access: "editor",
+      accessNotes: "MCP smoke editor grant: non-destructive shell only; edit generated lab files only."
     }
   });
   const chimeraStartText = String(chimeraStart.content?.[0]?.text ?? "");
-  if (!chimeraStartText.includes('"publicId": "CH-0001"') || !chimeraStartText.includes('"accessMode": "inherit"')) {
-    throw new Error("proteus_chimera_start did not create inherited CH-0001");
+  if (!chimeraStartText.includes('"publicId": "CH-0001"') || !chimeraStartText.includes('"accessMode": "editor"')) {
+    throw new Error("proteus_chimera_start did not create editor CH-0001");
   }
   await request("tools/call", {
     name: "proteus_chimera_attach_opencode",

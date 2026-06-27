@@ -164,6 +164,19 @@ try {
   if (!chimeraDoctor.includes('"ok": true') || !chimeraDoctor.includes("mock-opencode")) {
     throw new Error("chimera doctor did not validate mock OpenCode runtime");
   }
+  const editorWithoutNotes = runFail([
+    "chimera",
+    "start",
+    "--role",
+    "cicada",
+    "--goal",
+    "Editor without restrictions must fail",
+    "--access",
+    "editor"
+  ]);
+  if (!editorWithoutNotes.includes("editor access requires --access-notes")) {
+    throw new Error("chimera editor access without restrictions did not fail clearly");
+  }
   const chimeraStart = run([
     "chimera",
     "start",
@@ -172,12 +185,12 @@ try {
     "--goal",
     "Smoke non-obvious chain",
     "--access",
-    "inherit",
+    "editor",
     "--access-notes",
-    "Smoke coordinator grant"
+    "Smoke editor grant: non-destructive shell only; edit generated lab files only."
   ]);
-  if (!chimeraStart.includes('"publicId": "CH-0001"') || !chimeraStart.includes('"accessMode": "inherit"')) {
-    throw new Error("chimera start did not create CH-0001 with inherited access");
+  if (!chimeraStart.includes('"publicId": "CH-0001"') || !chimeraStart.includes('"accessMode": "editor"')) {
+    throw new Error("chimera start did not create CH-0001 with editor access");
   }
   for (const required of [
     ".vros/chimera/config.json",
@@ -350,7 +363,7 @@ try {
   fs.writeFileSync(swarmPlan, JSON.stringify({
     agents: [
       { role: "codebase-research", goal: "Map smoke surface" },
-      { role: "fuzzing", goal: "Probe smoke parser", accessMode: "lab" }
+      { role: "fuzzing", goal: "Probe smoke parser", accessMode: "explorer" }
     ]
   }, null, 2));
   const swarm = run(["chimera", "swarm", "--plan", swarmPlan]);

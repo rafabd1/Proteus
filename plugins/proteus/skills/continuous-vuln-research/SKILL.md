@@ -109,24 +109,29 @@ Before launching Chimera agents:
 - make the goal and stop conditions explicit enough that the agent can keep
   working until completion or a real blocker without guessing when to stop;
 - check `proteus chimera list` before creating new agents; inspect role, goal,
-  status, `labDir`, and `opencodeSessionId`, then prefer reusing an existing
-  relevant `CH-...` lab with `proteus chimera run --id <CH-ID>`;
+  status, `labDir`, and `opencodeSessionId`; create a new co-agent only when
+  there is a distinct front, role, model, or lab need, otherwise continue the
+  existing `CH-...` with `proteus chimera run --id <CH-ID>`;
 - choose the access mode deliberately.
 
 Access modes:
 
-- `lab`: default. The agent reads the workspace as needed and writes research
-  artifacts only inside its private Chimera lab.
-- `inherit`: the coordinator intentionally grants the agent the same workspace
-  permissions it has. Use this only when needed for the task or explicitly
-  instructed by the user. Still prefer the agent lab for notes, scripts, PoC
-  material, and evidence.
+- `explorer`: default. The agent reads the workspace as needed, may use shell
+  for read-only inspection and lab-local scripts, and writes research artifacts
+  only inside its private Chimera lab. Repository edits are out of scope.
+- `editor`: grants shell plus edit capability. Use this only when needed for
+  the task or explicitly instructed by the user. The coordinator must provide
+  explicit restrictions through `--access-notes`, covering allowed paths,
+  shell boundaries, destructive-command limits, network expectations, test/lab
+  scope, and whether workspace edits are allowed. Even in editor mode, the
+  agent must create/edit files only inside its Chimera lab unless the
+  restrictions explicitly name another allowed workspace path and action.
 
 Launch examples:
 
 ```text
 proteus chimera start --role chaining --goal "Develop non-obvious chains from the upload parser branch"
-proteus chimera start --role cicada --goal "Try bypass/chaining on branch B7" --access inherit --access-notes "Coordinator grants edit/run access for isolated exploit lab work"
+proteus chimera start --role cicada --goal "Try bypass/chaining on branch B7" --access editor --access-notes "Allowed: edit only .vros/chimera lab and generated PoC harness files; shell may run targeted tests and non-destructive probes; ask before workspace source edits."
 proteus chimera run --id CH-0001
 proteus chimera swarm --plan chimera-swarm.json
 ```

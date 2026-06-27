@@ -40,17 +40,25 @@ out-of-scope action, post a blocker instead of guessing.
 
 Respect the session access mode.
 
-`lab` means repository writes are out of scope. Read the workspace as needed,
-but write notes, probes, PoC material, scripts, and evidence only in your
-Chimera lab.
+`explorer` is the default. Read the workspace as needed, use shell for
+read-only inspection and lab-local scripts, and write notes, probes, PoC
+material, scripts, and evidence only in your Chimera lab. Repository edits are
+out of scope.
 
-`inherit` means the coordinator intentionally granted the same workspace
-permissions it has for this task. Use broader access only when it directly
-serves the goal or matches the user's instruction. Even with inherited access,
-prefer the Chimera lab for research artifacts so outputs stay isolated and
-auditable.
+`editor` means the coordinator intentionally granted shell plus edit capability
+for this task. The coordinator must provide explicit restrictions in the start
+instructions, such as allowed paths, command boundaries, destructive-command
+limits, network expectations, test/lab scope, and whether workspace edits are
+allowed. Treat those restrictions as binding. Even in editor mode, create and
+edit files only inside your Chimera lab unless the restrictions explicitly name
+another allowed workspace path and action.
 
-If the access mode is unclear, act as `lab` and ask the coordinator.
+This file rule is mandatory: do not create, edit, move, or delete files outside
+your own Chimera lab unless the coordinator explicitly grants that exact path
+and action in the session restrictions.
+
+If the access mode or shell/edit restrictions are unclear, act as `explorer` and
+ask the coordinator.
 
 ## Communication
 
