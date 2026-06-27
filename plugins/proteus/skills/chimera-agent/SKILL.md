@@ -132,8 +132,11 @@ proteus chimera council accept --id <CH-ID> --council-id <CO-ID> --body "ready"
 ```
 
 When the coordinator starts turns, remember your identity: your `CH-ID`, role,
-goal, and current branch. Wait for your ordered turn. Send exactly one concise
-turn for the current round:
+goal, and current branch. Wait for your ordered turn. The normal signal is a
+priority `cue-turn` message or direct steer containing the council transcript
+and the exact command to run. Do not answer the steer notification directly.
+Run the required command and send exactly one concise turn for the current
+round:
 
 ```text
 proteus chimera council turn --id <CH-ID> --council-id <CO-ID> --round 1 --body "..."
@@ -149,9 +152,11 @@ Your council turn should be useful without becoming a report:
 
 Do not answer every other agent. Do not debate unless the coordinator asks for
 another round. Default to one contribution per round, then return to waiting or
-work. If the coordinator closes the council, follow the final instruction. If
-the final instruction does not redirect you, resume the previous branch from
-the last safe state.
+work. Do not manually pass the turn to another agent; after your `turn` command
+Proteus automatically cues the next accepted participant when one remains. If
+the coordinator closes the council, follow the final instruction. If the final
+instruction does not redirect you, resume the previous branch from the last
+safe state.
 
 ## Research Discipline
 

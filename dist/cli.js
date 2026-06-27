@@ -297,10 +297,22 @@ function cmdChimeraCouncil(db, subcommand, parsed) {
                 message: (0, chimera_1.acceptChimeraCouncil)(db, requiredString(parsed, "id"), requiredString(parsed, "council-id"), getString(parsed, "body"))
             }, null, 2));
             return;
+        case "open-round":
+            console.log(JSON.stringify({
+                ok: true,
+                ...(0, chimera_1.openChimeraCouncilRound)(db, requiredString(parsed, "council-id"), getNumber(parsed, "round"), requiredString(parsed, "message"), getString(parsed, "start-id"), !getBoolean(parsed, "no-cue"))
+            }, null, 2));
+            return;
         case "turn":
             console.log(JSON.stringify({
                 ok: true,
-                message: (0, chimera_1.postChimeraCouncilTurn)(db, requiredString(parsed, "id"), requiredString(parsed, "council-id"), requiredString(parsed, "body"), getNumber(parsed, "round"))
+                ...(0, chimera_1.postChimeraCouncilTurn)(db, requiredString(parsed, "id"), requiredString(parsed, "council-id"), requiredString(parsed, "body"), getNumber(parsed, "round"), !getBoolean(parsed, "no-advance"))
+            }, null, 2));
+            return;
+        case "cue-turn":
+            console.log(JSON.stringify({
+                ok: true,
+                ...(0, chimera_1.cueChimeraCouncilTurn)(db, requiredString(parsed, "id"), requiredString(parsed, "council-id"), getNumber(parsed, "round"), getString(parsed, "prompt"), getBoolean(parsed, "manual"))
             }, null, 2));
             return;
         case "status":
@@ -310,7 +322,7 @@ function cmdChimeraCouncil(db, subcommand, parsed) {
             console.log(JSON.stringify((0, chimera_1.closeChimeraCouncil)(db, requiredString(parsed, "council-id"), requiredString(parsed, "summary"), getString(parsed, "instruction")), null, 2));
             return;
         default:
-            throw new Error("Usage: proteus chimera council <start|accept|turn|status|close>");
+            throw new Error("Usage: proteus chimera council <start|accept|open-round|cue-turn|turn|status|close>");
     }
 }
 function cmdChimeraConfig(db, subcommand, parsed) {

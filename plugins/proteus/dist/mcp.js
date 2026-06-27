@@ -179,16 +179,22 @@ const tools = [
     {
         name: "proteus_chimera_council",
         title: "Run Chimera Brainstorm Council",
-        description: "Coordinate a bounded brainstorm council across Chimera co-agents: start invite, accept, ordered turn, status, or close.",
+        description: "Coordinate a bounded brainstorm council across Chimera co-agents: start invite, accept, open-round, cue-turn, ordered turn, status, or close.",
         inputSchema: schema({
             root: stringProp("Target root path."),
-            action: stringProp("start, accept, turn, status, or close."),
+            action: stringProp("start, accept, open-round, cue-turn, turn, status, or close."),
             topic: stringProp("Council topic for action=start."),
             reason: stringProp("Why the council is being called."),
             ids: arrayProp("Specific Chimera session ids. Defaults to all active sessions for action=start."),
             id: stringProp("Single Chimera session id for accept or turn."),
             councilId: stringProp("Council id returned by action=start."),
             body: stringProp("Accept or turn body."),
+            message: stringProp("Coordinator round-opening message for action=open-round."),
+            startId: stringProp("Optional first participant id for action=open-round. Defaults to the first accepted participant."),
+            noCue: booleanProp("For action=open-round, open the round without cueing the first participant."),
+            prompt: stringProp("Coordinator prompt for action=cue-turn."),
+            manual: booleanProp("Required for action=cue-turn; reserved for recovery/troubleshooting."),
+            noAdvance: booleanProp("For action=turn, do not automatically cue the next accepted participant."),
             round: numberProp("Council round number for action=turn."),
             maxRounds: numberProp("Default max ordered rounds for action=start. Defaults to 1, capped at 5."),
             summary: stringProp("Final coordinator summary for action=close."),
@@ -207,8 +213,14 @@ const tools = [
             if (action === "accept") {
                 return toolEnvelope((0, chimera_1.acceptChimeraCouncil)(db, str(input.id), str(input.councilId), maybeStr(input.body)));
             }
+            if (action === "open-round") {
+                return toolEnvelope((0, chimera_1.openChimeraCouncilRound)(db, str(input.councilId), maybeNum(input.round), str(input.message), maybeStr(input.startId), input.noCue !== true));
+            }
+            if (action === "cue-turn") {
+                return toolEnvelope((0, chimera_1.cueChimeraCouncilTurn)(db, str(input.id), str(input.councilId), maybeNum(input.round), maybeStr(input.prompt), input.manual === true));
+            }
             if (action === "turn") {
-                return toolEnvelope((0, chimera_1.postChimeraCouncilTurn)(db, str(input.id), str(input.councilId), str(input.body), maybeNum(input.round)));
+                return toolEnvelope((0, chimera_1.postChimeraCouncilTurn)(db, str(input.id), str(input.councilId), str(input.body), maybeNum(input.round), input.noAdvance !== true));
             }
             if (action === "status") {
                 return toolEnvelope((0, chimera_1.getChimeraCouncil)(db, str(input.councilId)));
@@ -216,7 +228,7 @@ const tools = [
             if (action === "close") {
                 return toolEnvelope((0, chimera_1.closeChimeraCouncil)(db, str(input.councilId), str(input.summary), maybeStr(input.instruction)));
             }
-            throw new Error("action must be one of: start, accept, turn, status, close");
+            throw new Error("action must be one of: start, accept, open-round, cue-turn, turn, status, close");
         })
     },
     {

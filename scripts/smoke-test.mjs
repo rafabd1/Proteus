@@ -254,13 +254,9 @@ try {
   if (!chimeraRunExisting.includes('"ok": true') || !chimeraRunExisting.includes('"ses_mock_CH-0002"')) {
     throw new Error("chimera run did not reuse existing OpenCode session/lab");
   }
-  const chimeraDirectSend = run(["chimera", "send", "--id", "CH-0002", "--message", "Smoke direct steer", "--priority"]);
-  if (!chimeraDirectSend.includes('"mode": "steer"') || !chimeraDirectSend.includes('"ok": true')) {
-    throw new Error("chimera priority send did not steer active OpenCode session");
-  }
-  const steerLog = fs.readFileSync(path.join(tmpRoot, ".vros/chimera/mock-opencode-steer.jsonl"), "utf8");
-  if (!steerLog.includes("Smoke direct steer") || !steerLog.includes('"delivery":"steer"')) {
-    throw new Error("mock OpenCode server did not receive delivery=steer prompt");
+  const chimeraDirectSend = JSON.parse(run(["chimera", "send", "--id", "CH-0002", "--message", "Smoke direct steer", "--priority"]));
+  if (chimeraDirectSend.directDelivery?.mode !== "steer" || chimeraDirectSend.directDelivery?.ok !== true) {
+    throw new Error(`chimera priority send did not steer active OpenCode session: ${JSON.stringify(chimeraDirectSend.directDelivery)}`);
   }
   const chimeraCouncilStart = JSON.parse(run([
     "chimera",
@@ -281,12 +277,44 @@ try {
   }
   run(["chimera", "council", "accept", "--id", "CH-0001", "--council-id", councilId, "--body", "CH-0001 ready"]);
   run(["chimera", "council", "accept", "--id", "CH-0002", "--council-id", councilId, "--body", "CH-0002 ready"]);
-  run(["chimera", "council", "turn", "--id", "CH-0001", "--council-id", councilId, "--round", "1", "--body", "CH-0001 observation"]);
+  const cueBeforeRoundOpen = runFail(["chimera", "council", "cue-turn", "--id", "CH-0001", "--council-id", councilId, "--round", "1"]);
+  if (!cueBeforeRoundOpen.includes("Manual cue-turn is disabled")) {
+    throw new Error("chimera council allowed normal flow to use manual cue-turn directly");
+  }
+  const chimeraCouncilOpenRound = JSON.parse(run([
+    "chimera",
+    "council",
+    "open-round",
+    "--council-id",
+    councilId,
+    "--round",
+    "1",
+    "--message",
+    "Round 1: give one non-obvious pivot, one risk, and one next experiment."
+  ]));
+  if (!chimeraCouncilOpenRound.firstCue || !JSON.stringify(chimeraCouncilOpenRound.firstCue).includes("CH-0001") || !JSON.stringify(chimeraCouncilOpenRound.firstCue).includes("Council transcript so far")) {
+    throw new Error("chimera council open-round did not automatically cue the first accepted participant");
+  }
+  const chimeraCouncilTurnOne = JSON.parse(run(["chimera", "council", "turn", "--id", "CH-0001", "--council-id", councilId, "--round", "1", "--body", "CH-0001 observation"]));
+  if (
+    !chimeraCouncilTurnOne.nextCue ||
+    chimeraCouncilTurnOne.roundComplete !== false ||
+    !JSON.stringify(chimeraCouncilTurnOne.nextCue).includes("CH-0002") ||
+    !JSON.stringify(chimeraCouncilTurnOne.nextCue).includes("Required command:")
+  ) {
+    throw new Error("chimera council turn did not automatically cue the next accepted participant");
+  }
   const duplicateCouncilTurn = runFail(["chimera", "council", "turn", "--id", "CH-0001", "--council-id", councilId, "--round", "1", "--body", "duplicate observation"]);
   if (!duplicateCouncilTurn.includes("already posted a council turn")) {
     throw new Error("chimera council allowed a duplicate turn for the same agent and round");
   }
-  run(["chimera", "council", "turn", "--id", "CH-0002", "--council-id", councilId, "--round", "1", "--body", "CH-0002 observation"]);
+  if (chimeraCouncilTurnOne.nextCue.directDelivery?.mode !== "steer" || chimeraCouncilTurnOne.nextCue.directDelivery?.ok !== true) {
+    throw new Error(`chimera council automatic next cue did not steer attached OpenCode session: ${JSON.stringify(chimeraCouncilTurnOne.nextCue.directDelivery)}`);
+  }
+  const chimeraCouncilTurnTwo = JSON.parse(run(["chimera", "council", "turn", "--id", "CH-0002", "--council-id", councilId, "--round", "1", "--body", "CH-0002 observation"]));
+  if (chimeraCouncilTurnTwo.nextCue !== null || chimeraCouncilTurnTwo.roundComplete !== true) {
+    throw new Error("chimera council did not return to the coordinator after the last accepted participant");
+  }
   const chimeraCouncilStatus = JSON.parse(run(["chimera", "council", "status", "--council-id", councilId]));
   if (chimeraCouncilStatus.readyCount !== 2 || chimeraCouncilStatus.turns.length !== 2 || chimeraCouncilStatus.closed !== false) {
     throw new Error("chimera council status did not recover ready participants and ordered turns");

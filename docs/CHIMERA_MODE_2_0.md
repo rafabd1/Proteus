@@ -378,9 +378,13 @@ Flow:
 ```text
 1. Coordinator starts the council and sends priority invites.
 2. Agents accept when free or at a safe pause point.
-3. Coordinator checks status and starts ordered turns.
-4. Each agent sends one separated turn per round.
-5. Coordinator closes with a final decision and resume/redirect instruction.
+3. Coordinator checks status and opens the round with `open-round`.
+4. Proteus sends the exclusive council transcript to that agent via inbox and
+   direct OpenCode steer when possible.
+5. The called agent sends one separated `turn` response for that round.
+6. Proteus automatically cues the next accepted participant until the round is
+   complete.
+7. Control returns to the coordinator, who closes or opens another round.
 ```
 
 Commands:
@@ -388,10 +392,23 @@ Commands:
 ```text
 proteus chimera council start --topic "..." --ids CH-0001,CH-0002 --max-rounds 1
 proteus chimera council accept --id CH-0001 --council-id CO-... --body "ready"
+proteus chimera council open-round --council-id CO-... --round 1 --message "Give one pivot, one risk, one next experiment"
 proteus chimera council turn --id CH-0001 --council-id CO-... --round 1 --body "..."
 proteus chimera council status --council-id CO-...
 proteus chimera council close --council-id CO-... --summary "..." --instruction "..."
 ```
+
+`open-round` normally cues the first accepted participant automatically. After
+each agent posts `turn`, Proteus cues the next accepted participant
+automatically. Direct `cue-turn` is reserved for manual recovery when automatic
+advance was intentionally disabled; it requires an explicit manual flag in the
+CLI/MCP. When no accepted participant remains without a turn for that round,
+the response returns `roundComplete=true` and `nextCue=null`; the coordinator
+then decides whether to close, record outcomes, or open another round.
+
+Each council has an exclusive logical transcript keyed by `councilId`. Messages
+are still stored in the normal Chimera broker, but `status`, `cue-turn`, and
+`close` filter by `councilId`, so overlapping councils do not mix.
 
 Default to one round and normally cap at two. Extend only for a concrete
 unresolved high-ROI question. Agents should not reply to every other agent or
@@ -489,7 +506,7 @@ proteus chimera config show
 proteus chimera doctor
 proteus chimera start
 proteus chimera swarm
-proteus chimera council start|accept|turn|status|close
+proteus chimera council start|accept|open-round|turn|status|close
 proteus chimera send
 proteus chimera post
 proteus chimera snapshot

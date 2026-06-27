@@ -184,7 +184,24 @@ must:
 - check readiness with `proteus chimera council status --council-id CO-...`;
 - begin once all useful participants are ready, or proceed with ready agents if
   waiting longer would stall the campaign;
-- run ordered turns: one separated response per agent per round;
+- open every round with a coordinator message using
+  `proteus chimera council open-round --council-id CO-... --round N --message "..."`
+  so every participant sees the same question, constraints, and output shape.
+  In the normal flow, `open-round` automatically cues the first accepted
+  participant with the council transcript and required response command through
+  the Proteus inbox and direct OpenCode steer when possible;
+- expect the called agent to answer with `proteus chimera council turn`, not by
+  replying directly to the steer notification;
+- after each agent posts a turn, Proteus automatically cues the next accepted
+  participant in that round when one remains. The coordinator and agents should
+  not manually send the turn to the next participant unless automatic advance
+  was explicitly disabled for troubleshooting. Direct `cue-turn` is a manual
+  recovery command and must not be used in the normal council flow. When the
+  last accepted participant has answered, the round returns to the coordinator with
+  `roundComplete=true`;
+- check `proteus chimera council status --council-id CO-...` after turns and
+  before deciding whether to close, open a new round, or record a resulting
+  decision/branch/checkpoint;
 - rely on Proteus to reject duplicate turns from the same agent in the same
   round, and open a new round only when you intentionally extend the council;
 - keep the default to one round and normally cap at two rounds. Extend only for
@@ -202,6 +219,10 @@ validation work.
 If a council produces a useful pivot, record the resulting decision, branch,
 checkpoint, or kill reason in normal Proteus memory. The council transcript is
 coordination history, not proof by itself.
+
+Each council has an exclusive logical transcript keyed by `councilId`. Messages
+still live in the normal Chimera message broker, but council status, cue-turn,
+and close operations filter by `councilId`, so separate councils do not mix.
 
 ## Proteus State
 

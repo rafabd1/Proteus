@@ -323,6 +323,14 @@ try {
     name: "proteus_chimera_council",
     arguments: { root: tmpRoot, action: "accept", id: "CH-0001", councilId, body: "MCP CH-0001 ready" }
   });
+  const councilOpenRound = await request("tools/call", {
+    name: "proteus_chimera_council",
+    arguments: { root: tmpRoot, action: "open-round", councilId, round: 1, message: "MCP round 1 opening" }
+  });
+  const councilOpenRoundText = String(councilOpenRound.content?.[0]?.text ?? "");
+  if (!councilOpenRoundText.includes('"firstCue"') || !councilOpenRoundText.includes("it is your ordered turn now") || !councilOpenRoundText.includes("MCP CH-0001 ready")) {
+    throw new Error("proteus_chimera_council open-round did not automatically cue first accepted participant with transcript");
+  }
   await request("tools/call", {
     name: "proteus_chimera_council",
     arguments: { root: tmpRoot, action: "turn", id: "CH-0001", councilId, round: 1, body: "MCP CH-0001 observation" }

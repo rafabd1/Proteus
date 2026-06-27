@@ -2800,6 +2800,7 @@ function normalizeChimeraMessageKind(value: string): ChimeraMessageKind {
     value === "blocker" ||
     value === "snapshot" ||
     value === "heartbeat" ||
+    value === "council" ||
     value === "kill" ||
     value === "close" ||
     value === "error"

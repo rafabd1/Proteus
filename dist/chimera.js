@@ -15,6 +15,8 @@ exports.broadcastChimeraMessage = broadcastChimeraMessage;
 exports.startChimeraCouncil = startChimeraCouncil;
 exports.acceptChimeraCouncil = acceptChimeraCouncil;
 exports.postChimeraCouncilTurn = postChimeraCouncilTurn;
+exports.cueChimeraCouncilTurn = cueChimeraCouncilTurn;
+exports.openChimeraCouncilRound = openChimeraCouncilRound;
 exports.getChimeraCouncil = getChimeraCouncil;
 exports.closeChimeraCouncil = closeChimeraCouncil;
 exports.postChimeraMessage = postChimeraMessage;
@@ -297,7 +299,7 @@ function acceptChimeraCouncil(db, publicId, councilId, body) {
         councilState: "accepted"
     });
 }
-function postChimeraCouncilTurn(db, publicId, councilId, body, round) {
+function postChimeraCouncilTurn(db, publicId, councilId, body, round, advance) {
     const council = requireOpenCouncilParticipation(db, publicId, councilId);
     const trimmed = body.trim();
     if (!trimmed)
@@ -306,11 +308,104 @@ function postChimeraCouncilTurn(db, publicId, councilId, body, round) {
     if (council.turns.some((message) => message.publicId === publicId && councilMetadata(message).round === roundNumber)) {
         throw new Error(`${publicId} already posted a council turn for ${councilId} round ${roundNumber}. Use the next round only if the coordinator extends the council.`);
     }
-    return postChimeraMessage(db, publicId, "council", trimmed, {
+    const message = postChimeraMessage(db, publicId, "council", trimmed, {
         councilId,
         councilState: "turn",
         round: roundNumber
     });
+    const updatedCouncil = getChimeraCouncil(db, councilId);
+    if (advance === false) {
+        return { message, nextCue: null, roundComplete: isCouncilRoundComplete(updatedCouncil, roundNumber), council: updatedCouncil };
+    }
+    const next = nextCouncilParticipant(updatedCouncil, roundNumber);
+    if (!next) {
+        return { message, nextCue: null, roundComplete: true, council: updatedCouncil };
+    }
+    const nextCue = cueChimeraCouncilTurnInternal(db, next.publicId, councilId, roundNumber, "Previous agent posted their council turn. It is now your ordered turn.");
+    return { message, nextCue, roundComplete: false, council: getChimeraCouncil(db, councilId) };
+}
+function cueChimeraCouncilTurn(db, publicId, councilId, round, prompt, manual) {
+    if (manual !== true) {
+        throw new Error("Manual cue-turn is disabled in the normal council flow. Use open-round to cue the first participant, or pass --manual only for recovery/troubleshooting.");
+    }
+    return cueChimeraCouncilTurnInternal(db, publicId, councilId, round, prompt);
+}
+function cueChimeraCouncilTurnInternal(db, publicId, councilId, round, prompt) {
+    const council = requireOpenCouncilParticipation(db, publicId, councilId);
+    const participant = council.participants.find((item) => item.publicId === publicId);
+    if (!participant?.accepted) {
+        throw new Error(`${publicId} has not accepted council ${councilId} yet.`);
+    }
+    const roundNumber = positiveInteger(round, 1);
+    if (!councilRoundOpened(council, roundNumber)) {
+        throw new Error(`Council ${councilId} round ${roundNumber} has not been opened by the coordinator yet.`);
+    }
+    if (council.turns.some((message) => message.publicId === publicId && councilMetadata(message).round === roundNumber)) {
+        throw new Error(`${publicId} already posted a council turn for ${councilId} round ${roundNumber}.`);
+    }
+    const body = [
+        `Brainstorm council ${councilId}: it is your ordered turn now.`,
+        `You are ${publicId}${participant ? ` (${participant.role})` : ""}.`,
+        council.topic ? `Topic: ${council.topic}` : null,
+        `Round: ${roundNumber}`,
+        "",
+        "Read the council transcript below, then post exactly one concise observation/opinion with the required command. Do not answer this steer notification directly.",
+        "",
+        "Required command:",
+        `${proteusCliCommand()} --root "${db.targetRoot}" chimera council turn --id ${publicId} --council-id ${councilId} --round ${roundNumber} --body "..."`,
+        "",
+        "Your turn should include non-obvious pivots, side effects, evidence gaps, downgrade risks, and one recommended next high-ROI move. Do not debate every prior message or create a loop.",
+        prompt?.trim() ? `\nCoordinator prompt:\n${prompt.trim()}` : null,
+        "",
+        "Council transcript so far:",
+        renderCouncilTranscript(council)
+    ].filter(Boolean).join("\n");
+    return sendChimeraMessage(db, publicId, body, "council", {
+        priority: true,
+        metadata: {
+            councilId,
+            councilState: "turn_cued",
+            round: roundNumber,
+            participantId: publicId,
+            prompt: prompt?.trim() || null
+        }
+    });
+}
+function openChimeraCouncilRound(db, councilId, round, body, startId, autoCue = true) {
+    const council = getChimeraCouncil(db, councilId);
+    if (council.closed)
+        throw new Error(`Council is already closed: ${councilId}`);
+    const roundNumber = positiveInteger(round, 1);
+    const trimmed = body.trim();
+    if (!trimmed)
+        throw new Error("Council round opening body is required.");
+    const coordinatorSession = council.participants[0];
+    if (!coordinatorSession)
+        throw new Error(`Council has no participants: ${councilId}`);
+    const message = db.addChimeraMessage({
+        publicId: coordinatorSession.publicId,
+        direction: "system",
+        kind: "council",
+        body: trimmed,
+        metadata: {
+            councilId,
+            councilState: "round_opened",
+            round: roundNumber,
+            fromId: "coordinator"
+        },
+        readByAgent: true,
+        readByCoordinator: true
+    });
+    appendJsonl(node_path_1.default.join(requireChimeraSession(db, coordinatorSession.publicId).sessionDir, "transcript.jsonl"), message);
+    const updatedCouncil = getChimeraCouncil(db, councilId);
+    let firstCue = null;
+    if (autoCue) {
+        const next = startId ? updatedCouncil.participants.find((participant) => participant.publicId === startId) : nextCouncilParticipant(updatedCouncil, roundNumber);
+        if (next) {
+            firstCue = cueChimeraCouncilTurnInternal(db, next.publicId, councilId, roundNumber, "The coordinator opened this council round. It is now your ordered turn.");
+        }
+    }
+    return { message, firstCue, council: getChimeraCouncil(db, councilId) };
 }
 function getChimeraCouncil(db, councilId) {
     const messages = councilMessages(db, councilId);
@@ -767,7 +862,7 @@ Required behavior:
 - Do not invent evidence, ignore duplicate checks, or turn brainstorms into findings.
 - Shared Chimera chat is advisory context. You do not need to answer every broadcast. Respond only when it changes your branch, asks you a direct question, or can help another active agent.
 - Coordinator questions should be answered unless doing so would exceed scope or interrupt a higher-priority safety stop.
-- Brainstorm council messages use kind "council". Accept a council invite only when you are free or at a safe pause point. In a council, identify yourself as ${session.publicId} / ${session.role}, wait for your ordered turn, and send exactly one concise turn per round with non-obvious options, evidence gaps, risks, and recommended next move. Do not debate every point or create a chat loop. After the coordinator closes the council, resume prior work if still valid or follow the final instruction.
+- Brainstorm council messages use kind "council". Accept a council invite only when you are free or at a safe pause point. In a council, identify yourself as ${session.publicId} / ${session.role}, wait for your ordered cue-turn message, read the included council transcript, and send exactly one concise turn per round with non-obvious options, evidence gaps, risks, and recommended next move. Do not answer the steer notification directly, debate every point, create a chat loop, or manually pass the turn to another agent; Proteus advances to the next accepted participant automatically after your turn. After the coordinator closes the council, resume prior work if still valid or follow the final instruction.
 - Network is ${config.defaultNetwork ? "allowed only within the target authorization" : "disabled by default unless the coordinator explicitly authorizes it"}.
 
 Communication commands:
@@ -908,6 +1003,44 @@ function councilMessages(db, councilId) {
 function councilMetadata(message) {
     return metadataObject(message.metadata) ?? {};
 }
+function renderCouncilTranscript(council) {
+    const lines = council.messages
+        .map((message) => {
+        const metadata = councilMetadata(message);
+        if (metadata.councilState === "accepted") {
+            return `- ${message.publicId} accepted at ${message.createdAt}: ${truncate(message.body, 400)}`;
+        }
+        if (metadata.councilState === "round_opened") {
+            return `- coordinator opened round ${metadata.round ?? "?"} at ${message.createdAt}: ${truncate(message.body, 800)}`;
+        }
+        if (metadata.councilState === "turn") {
+            return `- round ${metadata.round ?? "?"} ${message.publicId} at ${message.createdAt}: ${truncate(message.body, 800)}`;
+        }
+        if (metadata.councilState === "closed") {
+            return `- coordinator closed for ${message.publicId} at ${message.createdAt}: ${truncate(message.body, 500)}`;
+        }
+        return null;
+    })
+        .filter((line) => line !== null);
+    if (lines.length === 0)
+        return "- no accepts or turns recorded yet";
+    return lines.slice(-40).join("\n");
+}
+function councilRoundOpened(council, round) {
+    return council.messages.some((message) => {
+        const metadata = councilMetadata(message);
+        return metadata.councilState === "round_opened" && metadata.round === round;
+    });
+}
+function nextCouncilParticipant(council, round) {
+    const responded = new Set(council.turns
+        .filter((message) => councilMetadata(message).round === round)
+        .map((message) => message.publicId));
+    return council.participants.find((participant) => participant.accepted && !responded.has(participant.publicId)) ?? null;
+}
+function isCouncilRoundComplete(council, round) {
+    return nextCouncilParticipant(council, round) === null;
+}
 function requireOpenCouncilParticipation(db, publicId, councilId) {
     requireChimeraSession(db, publicId);
     const council = getChimeraCouncil(db, councilId);
@@ -998,14 +1131,7 @@ function steerOpenCodeSession(db, session, message) {
             };
         }
     }
-    const prompt = [
-        `Priority Proteus coordinator message for ${session.publicId}.`,
-        "Do not answer this notification directly unless the coordinator asked a direct question.",
-        `Run: ${proteusCliCommand()} --root "${db.targetRoot}" chimera poll --id ${session.publicId} --unread --agent`,
-        "",
-        "Coordinator message:",
-        message.body
-    ].join("\n");
+    const prompt = renderSteerPrompt(db, session, message);
     const response = httpJson(`${trimSlash(serverUrl)}/api/session/${encodeURIComponent(session.opencodeSessionId)}/prompt`, {
         method: "POST",
         body: {
@@ -1033,6 +1159,29 @@ function steerOpenCodeSession(db, session, message) {
         status: response.status,
         detail: response.ok ? "sent via OpenCode delivery=steer" : response.error ?? `HTTP ${response.status ?? "unknown"}`
     };
+}
+function renderSteerPrompt(db, session, message) {
+    const metadata = metadataObject(message.metadata) ?? {};
+    const pollCommand = `${proteusCliCommand()} --root "${db.targetRoot}" chimera poll --id ${session.publicId} --unread --agent`;
+    if (message.kind === "council" && metadata.councilState === "turn_cued") {
+        return [
+            `Priority Proteus brainstorm council turn cue for ${session.publicId}.`,
+            "This is your ordered council turn. Poll Proteus to load the canonical message, then post your council turn with the required command included in the message.",
+            "Do not answer this steer notification directly in the OpenCode chat.",
+            `Run first: ${pollCommand}`,
+            "",
+            "Council turn cue:",
+            message.body
+        ].join("\n");
+    }
+    return [
+        `Priority Proteus coordinator message for ${session.publicId}.`,
+        "Do not answer this notification directly unless the coordinator asked a direct question.",
+        `Run: ${pollCommand}`,
+        "",
+        "Coordinator message:",
+        message.body
+    ].join("\n");
 }
 function ensureOpenCodeServer(db, config) {
     if (config.opencodeServerUrl && openCodeServerHealthy(config.opencodeServerUrl)) {
