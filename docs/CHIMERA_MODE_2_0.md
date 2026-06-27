@@ -30,7 +30,8 @@ orchestration, and durable `.vros` state.
   research fronts.
 - Support swarm mode: multiple independent Chimera agents launched together on
   different fronts.
-- Keep the repository read-only for Chimera agents by default.
+- Keep agents on private labs by default, with broader inherited access only
+  when the coordinator explicitly chooses it for that launch.
 - Give each agent a private session/lab directory where it can write notes,
   scripts, PoC material, snapshots, and outputs.
 - Route all Chimera coordination through Proteus CLI/MCP tools.
@@ -184,8 +185,13 @@ Use one directory per Chimera session:
         evidence/
 ```
 
-The agent may write only inside its session directory and lab. The main repo is
-read-only by contract. This avoids locks, leases, and collision management.
+The default access mode is `lab`: the agent reads the workspace as needed and
+writes research artifacts only inside its session lab. The coordinator may
+choose `inherit` for a session when the task or user instruction requires the
+agent to inherit the coordinator's workspace permissions. Even in inherited
+mode, the lab remains the preferred place for notes, scripts, PoC material, and
+evidence. This keeps the common path simple and avoids locks, leases, and
+collision management.
 
 ## Session Model
 
@@ -203,6 +209,8 @@ CREATE TABLE chimera_sessions (
   role TEXT NOT NULL,
   goal TEXT NOT NULL,
   status TEXT NOT NULL,
+  access_mode TEXT NOT NULL,
+  access_notes TEXT,
   model TEXT,
   provider TEXT,
   session_dir TEXT NOT NULL,
@@ -322,8 +330,8 @@ It should include:
 
 - You are a secondary Proteus agent, not the final authority.
 - Read `dossier.md`, `contract.md`, `agent-instructions.md`, and `skills/*.md`.
-- Main repo is read-only.
-- Write only inside your session directory and `lab/`.
+- Respect the coordinator-selected access mode.
+- Prefer your session directory and `lab/` for research artifacts.
 - Use Proteus CLI for communication:
   - `proteus chimera post`
   - `proteus chimera snapshot`
@@ -401,6 +409,7 @@ proteus chimera close
 
 ```text
 proteus chimera start --role chaining --goal "Explore non-obvious upload pipeline chains"
+proteus chimera start --role cicada --goal "Try bypass/chaining on B7" --access inherit --access-notes "Coordinator grants inherited access for exploit lab work"
 ```
 
 Useful optional flags:
@@ -412,6 +421,8 @@ Useful optional flags:
 --hypothesis-id <id>
 --model <model>
 --timeout <seconds>
+--access lab|inherit
+--access-notes <text>
 --background
 ```
 
@@ -614,16 +625,17 @@ Chimera can still be robust because the agent is instructed to communicate via
 2.0.0 should be intentionally simple:
 
 ```text
-Main repository: read-only by contract
-Agent writes: session directory and lab only
+Default access: lab
+Inherited access: coordinator-selected per launch
+Agent artifacts: session directory and lab
 Network: disabled by default
 Proteus memory: through allowed Proteus CLI/MCP commands
 Promotion: coordinator only
 ```
 
-No locks or leases in 2.0.0. If a future version needs edit-capable agents, add
-it later as an explicit mode after Chimera's basic communication and state model
-are stable.
+No locks or leases in 2.0.0. If the coordinator grants inherited access, the
+agent is expected to avoid colliding with other work and preserve artifacts in
+its own lab unless the task explicitly requires workspace edits.
 
 Use `.gooseignore` or Goose configuration to reinforce the contract when
 possible, but do not rely on it as the only enforcement layer. The prompt,
@@ -765,7 +777,7 @@ Ship the smallest complete system:
 - Proteus-managed messages.
 - Start/send/post/snapshot/heartbeat/poll/list/kill/close.
 - Swarm.
-- Read-only main repo contract.
+- Coordinator-selected access mode with `lab` as default.
 - Base and role-specific skill injection.
 - Agent-output recording on close.
 - Robust tests with mock Goose.

@@ -83,6 +83,49 @@ When available and allowed:
 Host capabilities improve orchestration; they do not weaken evidence,
 validation, or anti-slop gates.
 
+## Chimera Mode
+
+Chimera is optional. Use it only when the target benefits from one or more
+bounded secondary agents working under Proteus coordination. Normal Proteus
+research must still work without Chimera or Goose.
+
+Before launching Chimera agents:
+
+- run `proteus chimera config show` or MCP `proteus_chimera_config` with
+  `action=show`;
+- run `proteus chimera doctor` or MCP `proteus_chimera_doctor`;
+- confirm the active campaign/round state;
+- define a narrow role, goal, expected artifact, and stop conditions;
+- choose the access mode deliberately.
+
+Access modes:
+
+- `lab`: default. The agent reads the workspace as needed and writes research
+  artifacts only inside its private Chimera lab.
+- `inherit`: the coordinator intentionally grants the agent the same workspace
+  permissions it has. Use this only when needed for the task or explicitly
+  instructed by the user. Still prefer the agent lab for notes, scripts, PoC
+  material, and evidence.
+
+Launch examples:
+
+```text
+proteus chimera start --role chaining --goal "Develop non-obvious chains from the upload parser branch"
+proteus chimera start --role cicada --goal "Try bypass/chaining on branch B7" --access inherit --access-notes "Coordinator grants edit/run access for isolated exploit lab work"
+proteus chimera swarm --plan chimera-swarm.json
+```
+
+Coordinator duties:
+
+- poll unread messages with `proteus chimera poll --unread`;
+- send redirects with `proteus chimera send`;
+- kill looping or low-ROI sessions with `proteus chimera kill`;
+- close sessions with a verdict and summary;
+- independently validate any agent claim before recording it as a finding.
+
+Agents use Proteus to post messages, snapshots, and heartbeats. Do not manually
+mine `.vros/chimera` files unless the tool path is unavailable.
+
 ## Proteus State
 
 Treat `.vros/memory.sqlite` as the source of truth. Markdown exports are human
@@ -155,6 +198,8 @@ Use the dedicated skills for tactical execution:
 - `poc-exploit`: realistic PoC/lab design, manual blackbox reproduction,
   negative controls, reliability notes, and impact evidence.
 - `checkpoint`: compact campaign state compression after meaningful progress.
+- `chimera-agent`: instructions for Goose-backed secondary agents operating
+  inside Chimera sessions.
 
 Use role contracts for delegated fronts:
 
