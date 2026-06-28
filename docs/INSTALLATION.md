@@ -108,6 +108,11 @@ that Proteus ships multiple skills.
 
 ## 3. Claude Code Plugin Install
 
+Claude Code support is experimental and has not been exhaustively tested yet.
+Because Proteus is heavily focused on offensive security research, Claude
+models may also apply safety restrictions that affect exploit-development,
+chaining, or other offsec workflows.
+
 Install directly inside Claude Code:
 
 ```text
