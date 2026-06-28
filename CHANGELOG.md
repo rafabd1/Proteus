@@ -5,7 +5,7 @@
 ### Added
 
 - Added optional Chimera mode for OpenCode-backed secondary agents managed by Proteus.
-- Added Chimera CLI commands for config, doctor, start, swarm, send, broadcast, post, snapshot, heartbeat, poll, list, kill, and close.
+- Added Chimera CLI commands for config, doctor, start, swarm, council, send, broadcast, relay, post, snapshot, workflow-snapshot, heartbeat, run, wake, attach-opencode, poll, list, kill, close, and stop-server.
 - Added MCP tools matching the Chimera CLI control surface.
 - Added SQLite-backed Chimera sessions and messages with mirrored `.vros/chimera` session files, labs, JSONL inbox/outbox, snapshots, kill flags, and OpenCode logs.
 - Added coordinator-controlled Chimera access modes: default `explorer` and explicit `editor` per launched agent.
@@ -15,6 +15,8 @@
 - Added managed OpenCode server/session tracking for Chimera runs, `chimera run` reuse of existing labs, manual `attach-opencode`, and priority `delivery=steer` pings when an OpenCode session is attached.
 - Added Chimera brainstorm councils with ordered turns, automatic cueing, exclusive council transcripts, and bounded close instructions.
 - Added compact Chimera workflow snapshots that export recent OpenCode assistant messages while excluding user messages, tool calls, tool outputs, command output, patches, and file payloads.
+- Added `proteus branch update` and MCP `proteus_update_branch` for correcting branch status directly, plus automatic branch-status updates when decisions are recorded against `hypothesis_branch` or `branch` records.
+- Added a cross-process SQLite lock layer for Proteus writes so parallel Chimera agents and MCP/CLI calls coordinate through a single memory base more reliably.
 
 ### Changed
 
@@ -23,7 +25,10 @@
 - Consolidated human docs by replacing redundant planning/update documents with the current technical Chimera reference.
 - Renamed Chimera access modes to `explorer` and `editor`; `editor` now requires explicit `--access-notes` restrictions, and co-agents are instructed to create/edit files only inside their own Chimera lab unless a specific workspace path and action is granted.
 - Separated global Chimera runtime configuration from workspace state: `proteus chimera config init/show/disable` now writes the user's global `.vros/chimera/config.json` without creating workspace memory, while doctor/sessions/labs remain workspace-scoped.
-- Expanded CLI and MCP smoke tests to cover Chimera config/start/post/poll/snapshot/heartbeat/kill/close/swarm flows.
+- Chimera runs and priority wakes now have no default wall-clock timeout. Use `--timeout N` only for intentional bounded tests or short probes, and `--timeout 0` explicitly stores no-timeout behavior.
+- Workflow snapshots now export OpenCode session history and filter locally to compact recent agent text, rather than depending on OpenCode export flags.
+- Strengthened Chimera coordinator and co-agent contracts around local dedupe/intel first, shared workspace root usage, assigned campaign/round linkage, avoiding invented CLI commands, scoped source inspection, and preserving killed branches.
+- Expanded CLI and MCP smoke tests to cover Chimera config/start/post/poll/snapshot/workflow-snapshot/heartbeat/run/kill/close/swarm/council/relay flows, branch updates, no-timeout config, and MCP parity.
 
 ### Migration
 
