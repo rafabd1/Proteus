@@ -1,16 +1,51 @@
-# Proteus
+<h1 align="center">Proteus</h1>
 
-Proteus is an assistant-oriented research runtime for structured, continuous
-vulnerability research against real codebases.
+<p align="center">
+  <strong>Assistant-oriented runtime for continuous vulnerability research.</strong>
+  <br />
+  Map real codebases, preserve research memory, delegate specialist fronts, and validate exploitability with disciplined gates.
+</p>
 
-You give it a target repository. Proteus helps a coordinator agent map the
-codebase, select high-ROI security surfaces, develop non-obvious hypotheses,
-delegate bounded specialist fronts, validate candidates in realistic labs, and
-preserve memory so future rounds do not repeat weak or already-killed work.
+<p align="center">
+  <a href="#install">Install</a> &bull;
+  <a href="#quick-start">Quick Start</a> &bull;
+  <a href="#essential-cli">CLI</a> &bull;
+  <a href="#chimera-mode">Chimera</a> &bull;
+  <a href="#specialist-fronts">Specialists</a> &bull;
+  <a href="#documentation">Docs</a>
+</p>
 
-Proteus is built for professional bug bounty and offensive codebase research:
-realistic attacker modeling, duplicate checks, expected-behavior checks,
-negative controls, and PoC validation under documented/default conditions.
+<p align="center">
+  <img alt="Version" src="https://img.shields.io/badge/version-2.0.0-2f6feb" />
+  <img alt="Node.js" src="https://img.shields.io/badge/node-%3E%3D24-43853d" />
+  <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" />
+  <img alt="Runtime" src="https://img.shields.io/badge/runtime-CLI%20%2B%20MCP%20%2B%20Skills-7c3aed" />
+</p>
+
+<p align="center">
+  <a href="https://github.com/rafabd1/Proteus/actions/workflows/ci.yml">
+    <img alt="CI" src="https://github.com/rafabd1/Proteus/actions/workflows/ci.yml/badge.svg" />
+  </a>
+</p>
+
+<table>
+  <tr>
+    <td align="center"><strong>Continuous Research</strong><br />Campaigns, rounds, branches, gates, decisions, and checkpoints.</td>
+    <td align="center"><strong>Durable Memory</strong><br />SQLite-backed target memory plus reusable global learnings.</td>
+    <td align="center"><strong>Agent Native</strong><br />Codex and Claude Code skills with CLI and MCP runtime access.</td>
+    <td align="center"><strong>Chimera Mode</strong><br />Optional OpenCode-backed co-agents with labs, messages, and snapshots.</td>
+  </tr>
+</table>
+
+Proteus is built for professional bug bounty and offensive codebase research
+against real repositories. It helps a coordinator agent map the codebase, select
+high-ROI security surfaces, develop non-obvious hypotheses, delegate bounded
+specialist fronts, validate candidates in realistic labs, and preserve memory
+so future rounds do not repeat weak or already-killed work.
+
+It favors realistic attacker modeling, duplicate checks, expected-behavior
+checks, negative controls, and PoC validation under documented/default
+conditions.
 
 ## What Proteus Adds
 
