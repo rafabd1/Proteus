@@ -282,7 +282,7 @@ try {
     }
   });
   const chimeraStartText = String(chimeraStart.content?.[0]?.text ?? "");
-  if (!chimeraStartText.includes('"publicId": "CH-0001"') || !chimeraStartText.includes('"accessMode": "editor"')) {
+  if (!chimeraStartText.includes('"publicId": "CH-0001"') || !chimeraStartText.includes('"accessMode": "editor"') || !chimeraStartText.includes('"status": "ready"')) {
     throw new Error("proteus_chimera_start did not create editor CH-0001");
   }
   const invalidAttach = await requestFail("tools/call", {
@@ -299,6 +299,50 @@ try {
   const chimeraRunJson = JSON.parse(String(chimeraRun.content?.[0]?.text ?? "{}"));
   if (chimeraRunJson.record?.run?.exitCode !== 0 || chimeraRunJson.record?.session?.opencodeSessionId !== "ses_mock_CH-0001") {
     throw new Error("proteus_chimera_run did not attach the mock OpenCode session");
+  }
+  const chimeraServerUrl = chimeraRunJson.record?.session?.opencodeServerUrl;
+  if (typeof chimeraServerUrl !== "string" || !chimeraServerUrl.startsWith("http://127.0.0.1:")) {
+    throw new Error("proteus_chimera_run did not persist a mock OpenCode server URL");
+  }
+  const mockRegistryPath = path.join(tmpRoot, ".vros", "chimera", "mock-opencode-sessions.json");
+  fs.mkdirSync(path.dirname(mockRegistryPath), { recursive: true });
+  fs.writeFileSync(mockRegistryPath, JSON.stringify([
+    {
+      id: "ses_mock_wrong_workspace_CH_0001",
+      title: "proteus-CH-0001",
+      directory: path.join(tmpRoot, "wrong-workspace", ".vros", "chimera", "sessions", "CH-0001"),
+      time: { created: 1, updated: 9999999999999 }
+    },
+    {
+      id: "ses_mock_CH-0001",
+      title: "proteus-CH-0001",
+      directory: path.join(tmpRoot, ".vros", "chimera", "sessions", "CH-0001"),
+      time: { created: 1, updated: 2 }
+    }
+  ], null, 2) + "\n");
+  await request("tools/call", {
+    name: "proteus_chimera_attach_opencode",
+    arguments: { root: tmpRoot, id: "CH-0001", serverUrl: chimeraServerUrl, opencodeSessionId: "ses_mock_wrong_workspace_CH_0001" }
+  });
+  const staleSnapshot = await request("tools/call", {
+    name: "proteus_chimera_workflow_snapshot",
+    arguments: { root: tmpRoot, id: "CH-0001", limit: 1, maxMessageChars: 80 }
+  });
+  const staleSnapshotText = String(staleSnapshot.content?.[0]?.text ?? "");
+  if (!staleSnapshotText.includes('"opencodeSessionId": "ses_mock_CH-0001"') || staleSnapshotText.includes("ses_mock_wrong_workspace_CH_0001")) {
+    throw new Error("proteus_chimera_workflow_snapshot did not reconcile a stale OpenCode session id");
+  }
+  const chimeraRunAfterWrongAttach = await request("tools/call", {
+    name: "proteus_chimera_run",
+    arguments: { root: tmpRoot, id: "CH-0001", timeout: 10 }
+  });
+  const chimeraRunAfterWrongAttachJson = JSON.parse(String(chimeraRunAfterWrongAttach.content?.[0]?.text ?? "{}"));
+  if (chimeraRunAfterWrongAttachJson.record?.run?.exitCode !== 0 || chimeraRunAfterWrongAttachJson.record?.session?.opencodeSessionId !== "ses_mock_CH-0001") {
+    throw new Error("proteus_chimera_run did not recover from a stale OpenCode session id");
+  }
+  const chimeraRunAfterWrongAttachRecord = JSON.parse(fs.readFileSync(path.join(tmpRoot, ".vros", "chimera", "sessions", "CH-0001", "opencode", "run.json"), "utf8"));
+  if (chimeraRunAfterWrongAttachRecord.args.includes("ses_mock_wrong_workspace_CH_0001")) {
+    throw new Error("proteus_chimera_run reused a stale OpenCode session id from another workspace");
   }
   const chimeraWorkflowSnapshot = await request("tools/call", {
     name: "proteus_chimera_workflow_snapshot",
@@ -378,6 +422,21 @@ try {
   if (!chimeraSwarmText.includes('"publicId": "CH-0002"') || !chimeraSwarmText.includes('"publicId": "CH-0003"')) {
     throw new Error("proteus_chimera_swarm did not create independent sessions");
   }
+  const chimeraBackgroundStart = await request("tools/call", {
+    name: "proteus_chimera_start",
+    arguments: {
+      root: tmpRoot,
+      role: "explorer",
+      goal: "MCP background Chimera launch",
+      run: true
+    }
+  });
+  const chimeraBackgroundStartText = String(chimeraBackgroundStart.content?.[0]?.text ?? "");
+  if (!chimeraBackgroundStartText.includes('"publicId": "CH-0004"') || !chimeraBackgroundStartText.includes('"backgroundRun"') || !chimeraBackgroundStartText.includes('"started": true') || !chimeraBackgroundStartText.includes('"status": "starting"')) {
+    throw new Error("proteus_chimera_start run=true without timeout should return a background run");
+  }
+  await waitForFile(path.join(tmpRoot, ".vros", "chimera", "sessions", "CH-0004", "opencode", "run.json"), 10000);
+  await new Promise((resolve) => setTimeout(resolve, 1000));
   await request("tools/call", {
     name: "proteus_chimera_relay",
     arguments: { root: tmpRoot, fromId: "CH-0001", toId: "CH-0002", message: "MCP direct Chimera relay" }
@@ -525,6 +584,12 @@ try {
             codename: "argus",
             assignedSurfaceIds: [1],
             purpose: "Inspect the supplied smoke surface"
+          },
+          {
+            codename: "coordinator-main",
+            assignedSurfaceIds: [1],
+            purpose: "Coordinator-owned execution front",
+            requiredOutput: ["operator status", "next move"]
           }
         ]
       },
@@ -537,6 +602,9 @@ try {
   }
   if (!suppliedText.includes('"status": "active"')) {
     throw new Error("proteus_plan_round did not create an active plan by default");
+  }
+  if (!suppliedText.includes('"codename": "coordinator-main"') || !suppliedText.includes('"family": "coordinator-supplied"')) {
+    throw new Error("proteus_plan_round did not preserve custom coordinator-supplied agent fronts");
   }
   const activePlans = await request("tools/call", {
     name: "proteus_list_records",
@@ -802,6 +870,15 @@ function waitForExit(childProcess, timeoutMs) {
       resolve();
     });
   });
+}
+
+async function waitForFile(filePath, timeoutMs) {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    if (fs.existsSync(filePath)) return;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  throw new Error(`timed out waiting for file: ${filePath}`);
 }
 
 function rmTemp(target) {

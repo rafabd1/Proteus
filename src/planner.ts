@@ -126,7 +126,7 @@ export interface CoordinatorSurfaceInput {
 }
 
 export interface CoordinatorAgentFrontInput {
-  codename: AgentCodename;
+  codename: string;
   assignedSurfaceIds?: number[];
   purpose?: string;
   requiredOutput?: string[];
@@ -153,7 +153,7 @@ export interface PlannedSurface {
 }
 
 export interface AgentFront {
-  codename: AgentCodename;
+  codename: string;
   displayName: string;
   family: string;
   assignedSurfaceIds: number[];
@@ -293,17 +293,30 @@ function plannedSurfaceFromCoordinator(surface: CoordinatorSurfaceInput): Planne
 }
 
 function agentFrontFromCoordinator(front: CoordinatorAgentFrontInput): AgentFront {
-  if (!(front.codename in ROLES)) {
-    throw new Error(`Unknown Proteus role in agent front: ${String(front.codename)}`);
+  if (isKnownRole(front.codename)) {
+    return {
+      codename: front.codename,
+      displayName: ROLES[front.codename].displayName,
+      family: ROLES[front.codename].family,
+      assignedSurfaceIds: front.assignedSurfaceIds ?? [],
+      purpose: front.purpose ?? ROLES[front.codename].purpose,
+      requiredOutput: front.requiredOutput ?? ROLES[front.codename].requiredOutput
+    };
   }
   return {
     codename: front.codename,
-    displayName: ROLES[front.codename].displayName,
-    family: ROLES[front.codename].family,
+    displayName: front.codename,
+    family: "coordinator-supplied",
     assignedSurfaceIds: front.assignedSurfaceIds ?? [],
-    purpose: front.purpose ?? ROLES[front.codename].purpose,
-    requiredOutput: front.requiredOutput ?? ROLES[front.codename].requiredOutput
+    purpose: front.purpose ?? "Coordinator-supplied execution front.",
+    requiredOutput: front.requiredOutput && front.requiredOutput.length > 0
+      ? front.requiredOutput
+      : ["concise status", "evidence or blockers", "next high-ROI move"]
   };
+}
+
+function isKnownRole(codename: string): codename is AgentCodename {
+  return Object.prototype.hasOwnProperty.call(ROLES, codename);
 }
 
 function roiForFamily(family: SurfaceFamily, matchCount: number): RoiFactors {

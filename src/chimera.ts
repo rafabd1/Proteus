@@ -59,6 +59,17 @@ export interface ChimeraDirectDeliveryResult {
   detail: string;
 }
 
+export interface ChimeraBackgroundRunResult {
+  publicId: string;
+  started: boolean;
+  pid: number | null;
+  logPath: string;
+  stderrPath: string;
+  pidPath: string;
+  timeoutSec: number | null;
+  detail: string;
+}
+
 export interface ChimeraSendResult {
   message: ChimeraMessageRow;
   directDelivery: ChimeraDirectDeliveryResult;
@@ -178,7 +189,7 @@ export function stopOpenCodeServer(): { stopped: boolean; pid: number | null; ur
   let detail = "no managed OpenCode server PID is recorded";
   if (config.opencodeServerPid) {
     try {
-      process.kill(config.opencodeServerPid);
+      terminateProcessTree(config.opencodeServerPid);
       stopped = true;
       detail = "managed OpenCode server process was signaled";
     } catch (error) {
@@ -238,14 +249,14 @@ export function startChimeraSession(db: ProteusDb, input: ChimeraStartInput): {
     readByCoordinator: true
   });
   const linked = linkChimeraSession(db, session);
-  let updated = db.updateChimeraSession({ publicId: session.publicId, status: input.run ? "running" : "waiting" });
+  let updated = db.updateChimeraSession({ publicId: session.publicId, status: input.run ? "running" : "ready" });
   writeStatusFile(db, updated, { linked });
   let run: ChimeraRunResult | undefined;
   if (input.run) {
     run = runChimeraSession(db, updated.publicId, input.timeoutSec ?? config.defaultTimeoutSec);
     updated = db.updateChimeraSession({
       publicId: session.publicId,
-      status: run.exitCode === 0 ? "waiting" : run.killed ? "killed" : run.timedOut ? "timeout" : "failed",
+      status: chimeraStatusAfterRun(run, db.getChimeraSession(session.publicId)),
       opencodePid: null
     });
     writeStatusFile(db, updated, { linked, lastRun: run });
@@ -837,11 +848,69 @@ export function runChimeraSession(db: ProteusDb, publicId: string, timeoutSec?: 
   const run = runOpenCodeOnce(db, running, promptPath, config, resolveRunTimeoutSec(config, timeoutSec));
   const updated = db.updateChimeraSession({
     publicId,
-    status: run.exitCode === 0 ? "waiting" : run.killed ? "killed" : run.timedOut ? "timeout" : "failed",
+    status: chimeraStatusAfterRun(run, db.getChimeraSession(publicId)),
     opencodePid: null
   });
   writeStatusFile(db, updated, { lastRun: run });
   return run;
+}
+
+export function startChimeraRunBackground(db: ProteusDb, publicId: string, timeoutSec?: number): ChimeraBackgroundRunResult {
+  const config = getChimeraConfig();
+  const session = refreshChimeraRuntime(db, requireChimeraSession(db, publicId));
+  if (session.status === "running" || session.status === "starting") {
+    throw new Error(`Chimera session ${publicId} is already ${session.status}. Use priority steer only.`);
+  }
+  const opencodeDir = path.join(session.sessionDir, "opencode");
+  ensureDir(opencodeDir);
+  const backgroundLogPath = path.join(opencodeDir, "background-run.log");
+  const backgroundErrPath = path.join(opencodeDir, "background-run.err.log");
+  const backgroundPidPath = path.join(opencodeDir, "background-run.pid");
+  const resolvedTimeout = resolveRunTimeoutSec(config, timeoutSec);
+  const starting = db.updateChimeraSession({
+    publicId: session.publicId,
+    status: "starting",
+    opencodePid: null
+  });
+  writeStatusFile(db, starting, { backgroundRunStartedAt: new Date().toISOString() });
+  const args = [
+    resolveProteusCliPath(),
+    "--root",
+    db.targetRoot,
+    "chimera",
+    "run",
+    "--id",
+    session.publicId
+  ];
+  if (resolvedTimeout !== null) args.push("--timeout", String(resolvedTimeout));
+  const child = spawnHiddenBackground(process.execPath, args, {
+    cwd: session.sessionDir,
+    stdoutPath: backgroundLogPath,
+    stderrPath: backgroundErrPath,
+    pidPath: backgroundPidPath
+  });
+  child.unref();
+  appendJsonl(path.join(session.sessionDir, "transcript.jsonl"), {
+    type: "chimera_background_run",
+    publicId: starting.publicId,
+    pid: child.pid ?? null,
+    timeoutSec: resolvedTimeout,
+    logPath: toRelative(db.targetRoot, backgroundLogPath),
+    stderrPath: toRelative(db.targetRoot, backgroundErrPath),
+    createdAt: new Date().toISOString()
+  });
+  return {
+    publicId: starting.publicId,
+    started: true,
+    pid: child.pid ?? null,
+    logPath: backgroundLogPath,
+    stderrPath: backgroundErrPath,
+    pidPath: backgroundPidPath,
+    timeoutSec: resolvedTimeout,
+    detail: resolvedTimeout === null
+      ? "started Chimera run in the background with no wall-clock timeout"
+      : `started Chimera run in the background with timeout ${resolvedTimeout}s`
+  };
 }
 
 export function wakeChimeraSession(db: ProteusDb, publicId: string, input: { messageId?: number; timeoutSec?: number } = {}): ChimeraRunResult {
@@ -866,7 +935,7 @@ export function wakeChimeraSession(db: ProteusDb, publicId: string, input: { mes
   );
   const updated = db.updateChimeraSession({
     publicId,
-    status: run.exitCode === 0 ? "waiting" : run.killed ? "killed" : run.timedOut ? "timeout" : "failed",
+    status: chimeraStatusAfterRun(run, db.getChimeraSession(publicId)),
     opencodePid: null
   });
   writeStatusFile(db, updated, { lastWakeRun: run, wakeMessageId: input.messageId ?? null });
@@ -897,7 +966,7 @@ export function snapshotChimeraWorkflow(db: ProteusDb, publicId: string, input: 
   limit?: number;
   maxMessageChars?: number;
 } = {}): ChimeraWorkflowSnapshotResult {
-  const session = requireChimeraSession(db, publicId);
+  const session = reconcileOpenCodeSession(db, requireChimeraSession(db, publicId));
   if (!session.opencodeSessionId) {
     throw new Error(`Chimera session ${publicId} has no attached OpenCode session id. Run or attach OpenCode first.`);
   }
@@ -1094,6 +1163,18 @@ function runOpenCodeOnce(
 ): ChimeraRunResult {
   const server = ensureOpenCodeServer(db, config);
   const current = requireChimeraSession(db, session.publicId);
+  const attachedSessionId = current.opencodeSessionId && openCodeSessionMatchesDirectory(server.url, current.opencodeSessionId, session)
+    ? current.opencodeSessionId
+    : null;
+  if (current.opencodeSessionId && !attachedSessionId) {
+    appendJsonl(path.join(session.sessionDir, "transcript.jsonl"), {
+      type: "opencode_session_id_ignored",
+      publicId: session.publicId,
+      opencodeSessionId: current.opencodeSessionId,
+      reason: "attached OpenCode session id did not match this Chimera session directory",
+      createdAt: new Date().toISOString()
+    });
+  }
   const opencodeDir = path.join(session.sessionDir, "opencode");
   const stdoutPath = path.join(opencodeDir, "stdout.log");
   const stderrPath = path.join(opencodeDir, "stderr.log");
@@ -1114,8 +1195,8 @@ function runOpenCodeOnce(
     "--agent",
     config.defaultAgent ?? "proteus-chimera"
   ];
-  if (current.opencodeSessionId) {
-    args.push("--session", current.opencodeSessionId);
+  if (attachedSessionId) {
+    args.push("--session", attachedSessionId);
   } else {
     args.push("--title", `proteus-${session.publicId}`);
   }
@@ -1166,13 +1247,16 @@ function runOpenCodeOnce(
   };
   fs.writeFileSync(runPath, JSON.stringify(run, null, 2) + "\n");
   appendJsonl(path.join(session.sessionDir, "transcript.jsonl"), { type: "opencode_run", ...run });
-  const discovered = readOpenCodeSessionId(session) ?? discoverOpenCodeSession(server.url, session);
+  const fileSessionId = readOpenCodeSessionId(session);
+  const discovered = fileSessionId && openCodeSessionMatchesDirectory(server.url, fileSessionId, session)
+    ? fileSessionId
+    : discoverOpenCodeSession(server.url, session);
   const updated = db.updateChimeraSession({
     publicId: session.publicId,
     opencodeServerUrl: server.url,
-    opencodeSessionId: discovered ?? current.opencodeSessionId
+    opencodeSessionId: discovered ?? attachedSessionId
   });
-  writeStatusFile(db, updated, { lastOpenCodeDiscovery: { serverUrl: server.url, opencodeSessionId: discovered ?? current.opencodeSessionId } });
+  writeStatusFile(db, updated, { lastOpenCodeDiscovery: { serverUrl: server.url, opencodeSessionId: discovered ?? attachedSessionId } });
   if (stdout.trim()) {
     const agentText = extractOpenCodeAssistantText(stdout.trim());
     db.addChimeraMessage({
@@ -1758,6 +1842,28 @@ function refreshChimeraRuntime(db: ProteusDb, session: ChimeraSessionRow): Chime
   return updated;
 }
 
+function reconcileOpenCodeSession(db: ProteusDb, session: ChimeraSessionRow): ChimeraSessionRow {
+  let current = refreshChimeraRuntime(db, session);
+  const config = getChimeraConfig();
+  const serverUrl = current.opencodeServerUrl ?? config.opencodeServerUrl;
+  if (!serverUrl || !openCodeServerHealthy(serverUrl)) return current;
+  if (current.opencodeSessionId && openCodeSessionMatchesDirectory(serverUrl, current.opencodeSessionId, current)) {
+    return current;
+  }
+  const discovered = discoverOpenCodeSession(serverUrl, current);
+  if (!discovered) return current;
+  current = db.updateChimeraSession({
+    publicId: current.publicId,
+    opencodeServerUrl: serverUrl,
+    opencodeSessionId: discovered
+  });
+  writeStatusFile(db, current, {
+    opencodeSessionIdReconciled: discovered,
+    reason: "matched OpenCode session by Chimera session directory"
+  });
+  return current;
+}
+
 function openCodeSessionIdPath(session: ChimeraSessionRow): string {
   return path.join(session.sessionDir, "opencode", "opencode.session-id");
 }
@@ -1871,28 +1977,29 @@ function deliverPriorityChimeraMessage(db: ProteusDb, session: ChimeraSessionRow
 
 function steerOpenCodeSession(db: ProteusDb, session: ChimeraSessionRow, message: ChimeraMessageRow): ChimeraDirectDeliveryResult {
   const config = getChimeraConfig();
-  if (!session.opencodeSessionId) {
+  const current = reconcileOpenCodeSession(db, session);
+  if (!current.opencodeSessionId) {
     return { attempted: false, ok: false, mode: "none", detail: "no OpenCode session id is attached to this Chimera session" };
   }
-  let serverUrl = session.opencodeServerUrl ?? config.opencodeServerUrl;
+  let serverUrl = current.opencodeServerUrl ?? config.opencodeServerUrl;
   if (!serverUrl || !openCodeServerHealthy(serverUrl)) {
     try {
       const server = ensureOpenCodeServer(db, config);
       serverUrl = server.url;
-      db.updateChimeraSession({ publicId: session.publicId, opencodeServerUrl: server.url });
+      db.updateChimeraSession({ publicId: current.publicId, opencodeServerUrl: server.url });
     } catch (error) {
       return {
         attempted: false,
         ok: false,
         mode: "none",
         ...(serverUrl ? { serverUrl } : {}),
-        opencodeSessionId: session.opencodeSessionId,
+        opencodeSessionId: current.opencodeSessionId,
         detail: error instanceof Error ? error.message : String(error)
       };
     }
   }
-  const prompt = renderSteerPrompt(db, session, message);
-  const response = httpJson(`${trimSlash(serverUrl)}/api/session/${encodeURIComponent(session.opencodeSessionId)}/prompt`, {
+  const prompt = renderSteerPrompt(db, current, message);
+  const response = httpJson(`${trimSlash(serverUrl)}/api/session/${encodeURIComponent(current.opencodeSessionId)}/prompt`, {
     method: "POST",
     body: {
       prompt: { text: prompt },
@@ -1901,11 +2008,11 @@ function steerOpenCodeSession(db: ProteusDb, session: ChimeraSessionRow, message
     },
     timeoutMs: 10000
   });
-  appendJsonl(path.join(session.sessionDir, "transcript.jsonl"), {
+  appendJsonl(path.join(current.sessionDir, "transcript.jsonl"), {
     type: "opencode_direct_steer",
     messageId: message.id,
     serverUrl,
-    opencodeSessionId: session.opencodeSessionId,
+    opencodeSessionId: current.opencodeSessionId,
     status: response.status ?? null,
     ok: response.ok,
     error: response.error ?? null
@@ -1915,7 +2022,7 @@ function steerOpenCodeSession(db: ProteusDb, session: ChimeraSessionRow, message
     ok: response.ok,
     mode: "steer",
     serverUrl,
-    opencodeSessionId: session.opencodeSessionId,
+    opencodeSessionId: current.opencodeSessionId,
     status: response.status,
     detail: response.ok ? "sent via OpenCode delivery=steer" : response.error ?? `HTTP ${response.status ?? "unknown"}`
   };
@@ -2071,6 +2178,8 @@ function startOpenCodeServerProcess(db: ProteusDb, config: ChimeraConfig, port: 
     shell: needsWindowsShell(command.file),
     windowsHide: true
   });
+  try { fs.closeSync(stdout); } catch {}
+  try { fs.closeSync(stderr); } catch {}
   child.unref();
   return { pid: child.pid ?? null };
 }
@@ -2081,16 +2190,33 @@ function openCodeServerHealthy(url: string): boolean {
 }
 
 function discoverOpenCodeSession(serverUrl: string, session: ChimeraSessionRow): string | null {
-  const response = httpJson(`${trimSlash(serverUrl)}/session`, { method: "GET", timeoutMs: 10000 });
-  if (!response.ok || !Array.isArray(response.body)) return null;
-  const title = `proteus-${session.publicId}`;
+  const sessions = listOpenCodeSessions(serverUrl);
   const normalizedSessionDir = normalizeFsPath(session.sessionDir);
-  const candidates = response.body
-    .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null && !Array.isArray(item))
-    .filter((item) => item.title === title || normalizeFsPath(String(item.directory ?? "")) === normalizedSessionDir)
+  const candidates = sessions
+    .filter((item) => normalizeFsPath(String(item.directory ?? "")) === normalizedSessionDir)
     .sort((a, b) => Number((b.time as { updated?: number } | undefined)?.updated ?? 0) - Number((a.time as { updated?: number } | undefined)?.updated ?? 0));
   const id = candidates[0]?.id;
   return typeof id === "string" && id.startsWith("ses") ? id : null;
+}
+
+function openCodeSessionMatchesDirectory(serverUrl: string, sessionId: string, session: ChimeraSessionRow): boolean {
+  const normalizedSessionDir = normalizeFsPath(session.sessionDir);
+  return listOpenCodeSessions(serverUrl).some((item) =>
+    item.id === sessionId && normalizeFsPath(String(item.directory ?? "")) === normalizedSessionDir
+  );
+}
+
+function listOpenCodeSessions(serverUrl: string): Record<string, unknown>[] {
+  const response = httpJson(`${trimSlash(serverUrl)}/session`, { method: "GET", timeoutMs: 10000 });
+  if (!response.ok || !Array.isArray(response.body)) return [];
+  return response.body.filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null && !Array.isArray(item));
+}
+
+function chimeraStatusAfterRun(run: ChimeraRunResult, session: ChimeraSessionRow | null): ChimeraStatus {
+  if (run.exitCode === 0 || run.timedOut) return "waiting";
+  if (run.killed) return "killed";
+  if (session?.opencodeSessionId || run.stdoutPreview.includes('"type":"error"')) return "waiting";
+  return "failed";
 }
 
 function httpJson(url: string, options: { method?: string; body?: unknown; timeoutMs?: number } = {}): {
@@ -2138,6 +2264,14 @@ fetch(url, {
 
 function sleepMs(ms: number): void {
   spawnSync(process.execPath, ["-e", `Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ${Math.max(0, Math.floor(ms))})`]);
+}
+
+function terminateProcessTree(pid: number): void {
+  if (process.platform === "win32") {
+    const result = spawnSync("taskkill.exe", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore" });
+    if (result.status === 0) return;
+  }
+  process.kill(pid);
 }
 
 function trimSlash(value: string): string {
@@ -2232,6 +2366,8 @@ function spawnHiddenBackground(
     stdio: ["ignore", stdout, stderr],
     windowsHide: true
   });
+  try { fs.closeSync(stdout); } catch {}
+  try { fs.closeSync(stderr); } catch {}
   if (child.pid) fs.writeFileSync(options.pidPath, String(child.pid) + "\n");
   return child;
 }
@@ -2305,7 +2441,7 @@ async function discoverSession() {
     const normalizedDir = path.resolve(input.sessionDir).toLowerCase();
     const candidates = sessions
       .filter((item) => item && typeof item === "object")
-      .filter((item) => item.title === input.sessionTitle || path.resolve(String(item.directory || "")).toLowerCase() === normalizedDir)
+      .filter((item) => path.resolve(String(item.directory || "")).toLowerCase() === normalizedDir)
       .sort((a, b) => Number((b.time && b.time.updated) || 0) - Number((a.time && a.time.updated) || 0));
     const id = candidates[0] && candidates[0].id;
     if (typeof id === "string" && id.startsWith("ses")) {

@@ -77,6 +77,7 @@ export type ChimeraRole =
 export type ChimeraStatus =
   | "starting"
   | "running"
+  | "ready"
   | "waiting"
   | "killed"
   | "closed"

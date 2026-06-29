@@ -2925,6 +2925,7 @@ function normalizeChimeraStatus(value: string): ChimeraStatus {
   if (
     value === "starting" ||
     value === "running" ||
+    value === "ready" ||
     value === "waiting" ||
     value === "killed" ||
     value === "closed" ||

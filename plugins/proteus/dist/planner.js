@@ -193,17 +193,29 @@ function plannedSurfaceFromCoordinator(surface) {
     };
 }
 function agentFrontFromCoordinator(front) {
-    if (!(front.codename in roles_1.ROLES)) {
-        throw new Error(`Unknown Proteus role in agent front: ${String(front.codename)}`);
+    if (isKnownRole(front.codename)) {
+        return {
+            codename: front.codename,
+            displayName: roles_1.ROLES[front.codename].displayName,
+            family: roles_1.ROLES[front.codename].family,
+            assignedSurfaceIds: front.assignedSurfaceIds ?? [],
+            purpose: front.purpose ?? roles_1.ROLES[front.codename].purpose,
+            requiredOutput: front.requiredOutput ?? roles_1.ROLES[front.codename].requiredOutput
+        };
     }
     return {
         codename: front.codename,
-        displayName: roles_1.ROLES[front.codename].displayName,
-        family: roles_1.ROLES[front.codename].family,
+        displayName: front.codename,
+        family: "coordinator-supplied",
         assignedSurfaceIds: front.assignedSurfaceIds ?? [],
-        purpose: front.purpose ?? roles_1.ROLES[front.codename].purpose,
-        requiredOutput: front.requiredOutput ?? roles_1.ROLES[front.codename].requiredOutput
+        purpose: front.purpose ?? "Coordinator-supplied execution front.",
+        requiredOutput: front.requiredOutput && front.requiredOutput.length > 0
+            ? front.requiredOutput
+            : ["concise status", "evidence or blockers", "next high-ROI move"]
     };
+}
+function isKnownRole(codename) {
+    return Object.prototype.hasOwnProperty.call(roles_1.ROLES, codename);
 }
 function roiForFamily(family, matchCount) {
     const density = Math.min(10, Math.ceil(matchCount / 5));
