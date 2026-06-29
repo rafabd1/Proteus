@@ -95,6 +95,13 @@ independent reasoning, broader angle coverage, deeper prototyping, or a
 complete specialist investigation. For small, mechanical, or narrow helper
 tasks, prefer ordinary subagents when they are available.
 
+The coordinator leads the campaign, but Chimera is not a step-by-step remote
+control mode. Launch a co-agent with enough context, scope, heuristics, access
+limits, expected artifact, and stop condition for it to reason independently.
+After launch, let it work. Observe through unread polling, workflow snapshots,
+heartbeats, snapshots, and checkpoints instead of interrupting every command or
+minor branch choice.
+
 Before launching Chimera agents:
 
 - run global `proteus chimera config show` or MCP `proteus_chimera_config`
@@ -184,14 +191,42 @@ mine `.vros/chimera` files unless the tool path is unavailable.
 
 Treat active Chimera sessions as a coordinated research team: strategic,
 pragmatic, low-noise, and focused on efficient progress toward precise
-objectives. Do not over-control every step. Redirect only when strategy,
-scope, duplicated work, or new evidence requires it.
+objectives. Do not over-control every step, rewrite the agent's plan after each
+observation, or ask for constant micro-updates. Redirect only when one of these
+is true:
+
+- the agent is drifting outside scope, access limits, or the assigned stop
+  condition;
+- the branch is duplicating known work, repeating a killed path, or spending
+  time on low-ROI material;
+- new evidence changes the campaign strategy, invalidates the assigned front,
+  or creates a better pivot;
+- the agent is blocked, looping, idle, or failing to use Proteus messages and
+  snapshots;
+- the user gives a new instruction that changes scope, priority, permissions,
+  or stopping criteria.
+
+Use normal Chimera messages as productive research exchange, not supervision
+noise. Share facts, pivots, dedupe discoveries, scope changes, and concrete
+questions. Co-agents do not need to answer every broadcast; they should answer
+direct questions and messages that materially affect their branch.
+
+Before creating a new Chimera agent, prefer to reuse an active or waiting
+session with the same role/front/lab context. Use `proteus chimera list` to
+check existing sessions, then continue with `proteus chimera run --id CH-...`
+or send a redirect. Start a new co-agent only when the campaign needs a distinct
+front, model, access mode, or independent lab.
 
 ### Chimera Brainstorm Council
 
 Use a Chimera council when a checkpoint, stalled campaign, cross-campaign
 pivot, or difficult branch would benefit from ordered independent perspectives.
 Do not call a council for routine decisions or every minor uncertainty.
+
+Good council triggers include: a campaign has stalled after real effort, two
+branches are competing for the next round, a low-level primitive needs fresh
+chaining ideas, co-agents hold complementary partial context, or the coordinator
+needs a concise sanity check before a major pivot or kill decision.
 
 A council is a short structured meeting, not a free-form chat. The coordinator
 must:

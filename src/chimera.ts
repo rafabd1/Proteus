@@ -1101,6 +1101,7 @@ function runOpenCodeOnce(
   const sessionIdPath = openCodeSessionIdPath(session);
   const args = [
     "run",
+    "--pure",
     "--format",
     "json",
     "--thinking",
@@ -1336,19 +1337,41 @@ function copySkillFiles(session: ChimeraSessionRow): void {
   if (!skillsDir) return;
   const available = listAvailableSkillNames(skillsDir);
   const wanted = new Set(["chimera-agent", ...skillsForRole(session.role, available)]);
-  const copied: string[] = [];
+  const injected: string[] = [];
   for (const name of wanted) {
     const source = path.join(skillsDir, name, "SKILL.md");
     if (!fs.existsSync(source)) continue;
-    fs.copyFileSync(source, path.join(session.sessionDir, "skills", `${name}.md`));
+    linkOrCopyFile(source, path.join(session.sessionDir, "skills", `${name}.md`));
     const opencodeSkillDir = path.join(session.sessionDir, ".opencode", "skills", name);
-    ensureDir(opencodeSkillDir);
-    fs.copyFileSync(source, path.join(opencodeSkillDir, "SKILL.md"));
-    copied.push(name);
+    linkOrCopyDir(path.dirname(source), opencodeSkillDir);
+    injected.push(name);
   }
-  const index = renderChimeraSkillsIndex(session, skillsDir, available, copied);
+  const index = renderChimeraSkillsIndex(session, skillsDir, available, injected);
   fs.writeFileSync(path.join(session.sessionDir, "skills", "README.md"), index);
   fs.writeFileSync(path.join(session.sessionDir, ".opencode", "skills", "README.md"), index);
+}
+
+function linkOrCopyFile(source: string, destination: string): void {
+  ensureDir(path.dirname(destination));
+  try {
+    if (fs.existsSync(destination) && fs.lstatSync(destination).isSymbolicLink()) fs.unlinkSync(destination);
+    if (!fs.existsSync(destination)) fs.symlinkSync(source, destination, "file");
+    return;
+  } catch {
+    fs.copyFileSync(source, destination);
+  }
+}
+
+function linkOrCopyDir(source: string, destination: string): void {
+  ensureDir(path.dirname(destination));
+  try {
+    if (fs.existsSync(destination) && fs.lstatSync(destination).isSymbolicLink()) fs.unlinkSync(destination);
+    if (!fs.existsSync(destination)) fs.symlinkSync(source, destination, process.platform === "win32" ? "junction" : "dir");
+    return;
+  } catch {
+    ensureDir(destination);
+    fs.copyFileSync(path.join(source, "SKILL.md"), path.join(destination, "SKILL.md"));
+  }
 }
 
 function listAvailableSkillNames(skillsDir: string): string[] {
@@ -1377,7 +1400,7 @@ function renderChimeraSkillsIndex(session: ChimeraSessionRow, skillsDir: string,
     `Role: ${session.role}`,
     `Proteus skill package root: ${skillsDir}`,
     "",
-    "Injected skill files for this co-agent are copied into this directory and into `.opencode/skills/`.",
+    "Injected skill files for this co-agent are linked into this directory and into `.opencode/skills/` when the filesystem allows it; Proteus falls back to generated copies only when links are unavailable.",
     "Read `chimera-agent.md` first. It is the primary Chimera co-agent contract.",
     "Do not load `continuous-vuln-research`; it is the coordinator contract and is intentionally not injected into Chimera sessions.",
     "For non-injected specialist skills, use the package path only when the coordinator explicitly redirects you or asks you to consult that skill.",

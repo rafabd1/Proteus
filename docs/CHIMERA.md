@@ -65,6 +65,14 @@ session again with `chimera run --id <CH-ID>`. `run` and priority `wake` do not
 time out by default, so an active OpenCode agent can keep working until it
 finishes, blocks, is killed, or is closed.
 
+Chimera is for parallel co-agent fronts, not step-by-step supervision. The
+coordinator should launch a session with enough context, scope, access limits,
+expected artifact, and stop conditions for the co-agent to reason and probe
+independently. After launch, use `poll`, `workflow-snapshot`, agent-authored
+snapshots, heartbeats, and checkpoints to observe progress. Intervene when
+strategy, scope, duplicate work, low-ROI drift, blockers, new evidence, or user
+instructions require it.
+
 Session state is stored under:
 
 ```text
@@ -84,6 +92,11 @@ Session state is stored under:
 
 SQLite memory remains the source of truth. JSONL and Markdown files are local
 mirrors for inspection and recovery.
+
+The session directory holds the per-agent dossier, prompt, status, transcript
+mirrors, and private lab. Skill files are linked from the installed Proteus
+package when the filesystem allows it; Proteus falls back to generated copies
+only when links are unavailable.
 
 ## Agent Context
 
@@ -116,6 +129,13 @@ package subdirectory. Generated contracts and skills include commands with
 The coordinator leads strategy and validation. Chimera agents run independent
 research fronts and bring different angles, but they do not promote findings or
 bypass Proteus gates.
+
+Do not create a new session for every coordinator turn. Use
+`proteus chimera list --root ...` first, inspect role, goal, status, lab path,
+and `opencodeSessionId`, then reuse the existing `CH-...` session with
+`chimera run --id`, priority `send`, `broadcast`, or a council redirect when
+the front is still the same. New sessions are for genuinely separate fronts,
+models, access modes, or labs.
 
 Co-agents may read campaign context, but campaign and round state belongs to
 the coordinator. From inside a Chimera session, Proteus blocks `campaign
@@ -229,7 +249,9 @@ filters the raw data locally before returning or writing the compact snapshot.
 
 ## Councils
 
-A council is an ordered, bounded brainstorm across active Chimera agents.
+A council is an ordered, bounded brainstorm across active Chimera agents. Use
+it for pivots, stalled campaigns, conflicting branch priorities, or non-obvious
+chaining ideation. Do not use it for routine status updates.
 
 ```powershell
 proteus chimera council start --root C:\path\to\target --topic "B7 chain pivot" --ids CH-0001,CH-0002 --max-rounds 1
@@ -254,6 +276,11 @@ proteus chimera council turn --root C:\path\to\target --council-id CO-... --roun
 After each turn, Proteus automatically cues the next accepted participant. When
 the round is complete, control returns to the coordinator. `cue-turn` is manual
 recovery only and requires an explicit manual flag.
+
+Keep councils short. One round is the default, two rounds is normally enough.
+The coordinator should open each round with the shared state and exact decision
+needed, then close with the final instruction so agents can resume previous
+work or follow the new pivot.
 
 ## Swarm
 

@@ -489,6 +489,10 @@ try {
   if (!chimeraRunExisting.includes('"ok": true') || !chimeraRunExisting.includes('"ses_mock_CH-0002"')) {
     throw new Error("chimera run did not reuse existing OpenCode session/lab");
   }
+  const chimeraRunRecord = JSON.parse(fs.readFileSync(path.join(tmpRoot, ".vros/chimera/sessions/CH-0002/opencode/run.json"), "utf8"));
+  if (!Array.isArray(chimeraRunRecord.args) || !chimeraRunRecord.args.includes("--pure")) {
+    throw new Error("chimera run should invoke OpenCode with --pure to avoid per-session plugin dependency installs");
+  }
   const chimeraWorkflowSnapshot = JSON.parse(run(["chimera", "workflow-snapshot", "--id", "CH-0002", "--limit", "3", "--max-message-chars", "80"]));
   const workflowSnapshotText = JSON.stringify(chimeraWorkflowSnapshot);
   if (chimeraWorkflowSnapshot.messages.length !== 3 || !workflowSnapshotText.includes("First compact agent workflow message")) {
