@@ -551,8 +551,12 @@ function postChimeraMessage(db, publicId, kind, body, metadata) {
 }
 function snapshotChimeraSession(db, publicId, body) {
     const session = requireChimeraSession(db, publicId);
-    node_fs_1.default.writeFileSync(node_path_1.default.join(session.sessionDir, "snapshot.md"), body.trimEnd() + "\n");
-    const message = postChimeraMessage(db, publicId, "snapshot", body);
+    const snapshotPath = node_path_1.default.join(session.sessionDir, "snapshot.md");
+    node_fs_1.default.writeFileSync(snapshotPath, body.trimEnd() + "\n");
+    const message = postChimeraMessage(db, publicId, "snapshot", body, {
+        snapshotPath: (0, paths_1.toRelative)(db.targetRoot, snapshotPath),
+        bodyLength: body.length
+    });
     writeStatusFile(db, session, { latestSnapshotAt: message.createdAt });
     return message;
 }
@@ -609,9 +613,19 @@ function pollChimeraMessages(db, input) {
     const latestSnapshots = sessions
         .map((session) => db.latestChimeraSnapshot(session.publicId))
         .filter((message) => message !== null)
-        .map((message) => ({ publicId: message.publicId, body: message.body, createdAt: message.createdAt }));
+        .map((message) => {
+        const view = chimeraMessagePollView(db, message);
+        return {
+            publicId: view.publicId,
+            body: view.body,
+            bodyLength: view.bodyLength,
+            bodyTruncated: view.bodyTruncated,
+            fullBodyPath: view.fullBodyPath,
+            createdAt: view.createdAt
+        };
+    });
     const controlStatus = sessions.map((session) => chimeraControlStatus(db, session));
-    return { sessions, messages, latestSnapshots, controlStatus };
+    return { sessions, messages: messages.map((message) => chimeraMessagePollView(db, message)), latestSnapshots, controlStatus };
 }
 function listChimeraSessions(db, input = {}) {
     const activeOnly = input.status === "active";
@@ -884,25 +898,52 @@ function attachOpenCodeSession(db, publicId, input) {
     return updated;
 }
 function snapshotChimeraWorkflow(db, publicId, input = {}) {
-    const session = reconcileOpenCodeSession(db, requireChimeraSession(db, publicId));
+    let session = reconcileOpenCodeSession(db, requireChimeraSession(db, publicId));
     if (!session.opencodeSessionId) {
         throw new Error(`Chimera session ${publicId} has no attached OpenCode session id. Run or attach OpenCode first.`);
     }
     const limit = Math.max(1, Math.min(50, positiveInteger(input.limit, 8)));
     const maxMessageChars = Math.max(80, Math.min(8000, positiveInteger(input.maxMessageChars, 1200)));
     const command = commandParts(session.opencodeCommand || getChimeraConfig().opencodeCommand);
-    const result = exportOpenCodeSession(command, session);
-    const stdout = String(result.stdout ?? "");
-    const stderr = String(result.stderr ?? "");
-    if (result.status !== 0) {
-        throw new Error(`OpenCode export failed for ${session.opencodeSessionId}: ${truncate(stderr || result.error?.message || `exit ${result.status}`, 1000)}`);
+    const attempts = [];
+    let result = null;
+    let stdout = "";
+    let stderr = "";
+    let exported = undefined;
+    let exportedSessionId = session.opencodeSessionId;
+    let parseError = "";
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        result = exportOpenCodeSession(command, session);
+        stdout = String(result.stdout ?? "");
+        stderr = String(result.stderr ?? "");
+        try {
+            exported = JSON.parse(extractJsonObject(stdout));
+            parseError = "";
+        }
+        catch (error) {
+            parseError = error instanceof Error ? error.message : String(error);
+        }
+        if (exported !== undefined)
+            exportedSessionId = session.opencodeSessionId;
+        attempts.push({
+            attempt,
+            opencodeSessionId: session.opencodeSessionId,
+            exitCode: result.status,
+            parsed: exported !== undefined,
+            stdoutPreview: openCodeExportStdoutPreview(stdout, exported !== undefined),
+            stderrPreview: truncate(stderr.trim(), 1000),
+            errorPreview: truncate(String(result.error?.message ?? parseError ?? ""), 1000)
+        });
+        if (exported !== undefined)
+            break;
+        if (attempt < 3) {
+            sleepMs(250 * attempt);
+            session = reconcileOpenCodeSession(db, requireChimeraSession(db, publicId));
+        }
     }
-    let exported;
-    try {
-        exported = JSON.parse(extractJsonObject(stdout));
-    }
-    catch (error) {
-        throw new Error(`OpenCode export did not return JSON: ${error instanceof Error ? error.message : String(error)}`);
+    if (exported === undefined || !result) {
+        const last = attempts[attempts.length - 1];
+        throw new Error(`OpenCode export failed for ${session.opencodeSessionId}: exit=${last?.exitCode ?? "unknown"}; parse=${parseError || "no JSON"}; stderr=${last?.stderrPreview || "-"}; stdout=${last?.stdoutPreview || "-"}; error=${last?.errorPreview || "-"}`);
     }
     const extracted = extractWorkflowMessages(exported);
     const generatedAt = new Date().toISOString();
@@ -925,7 +966,7 @@ function snapshotChimeraWorkflow(db, publicId, input = {}) {
     const markdownPath = node_path_1.default.join(outDir, `${stamp}.md`);
     const snapshot = {
         publicId,
-        opencodeSessionId: session.opencodeSessionId,
+        opencodeSessionId: exportedSessionId ?? String(session.opencodeSessionId),
         generatedAt,
         limit,
         maxMessageChars,
@@ -933,7 +974,9 @@ function snapshotChimeraWorkflow(db, publicId, input = {}) {
         files: { jsonPath, markdownPath },
         export: {
             exitCode: result.status,
-            stderrPreview: truncate(stderr.trim(), 1000)
+            stdoutPreview: openCodeExportStdoutPreview(stdout, true),
+            stderrPreview: truncate(stderr.trim(), 1000),
+            attempts
         }
     };
     node_fs_1.default.writeFileSync(jsonPath, JSON.stringify(snapshot, null, 2) + "\n");
@@ -1682,6 +1725,36 @@ function writeStatusFile(db, session, extra = {}) {
     (0, paths_1.ensureDir)(session.sessionDir);
     node_fs_1.default.writeFileSync(node_path_1.default.join(session.sessionDir, "status.json"), JSON.stringify({ session, extra }, null, 2) + "\n");
 }
+function chimeraMessagePollView(db, message) {
+    const metadata = metadataObject(message.metadata) ?? {};
+    const fullBodyPath = chimeraMessageFullBodyPath(db, message, metadata);
+    const bodyLength = message.body.length;
+    const previewLimit = message.kind === "snapshot" ? 6000 : 12000;
+    const bodyTruncated = bodyLength > previewLimit;
+    return {
+        ...message,
+        body: bodyTruncated ? `${message.body.slice(0, previewLimit - 3)}...` : message.body,
+        bodyLength,
+        bodyTruncated,
+        fullBodyPath
+    };
+}
+function chimeraMessageFullBodyPath(db, message, metadata) {
+    const rawSnapshotPath = typeof metadata.snapshotPath === "string" ? metadata.snapshotPath : "";
+    if (rawSnapshotPath) {
+        return node_path_1.default.isAbsolute(rawSnapshotPath) ? rawSnapshotPath : node_path_1.default.join(db.targetRoot, rawSnapshotPath);
+    }
+    if (message.kind === "snapshot") {
+        const session = db.getChimeraSession(message.publicId);
+        return session ? node_path_1.default.join(session.sessionDir, "snapshot.md") : null;
+    }
+    return null;
+}
+function openCodeExportStdoutPreview(stdout, parsed) {
+    if (parsed)
+        return `parsed OpenCode export (${stdout.length} chars)`;
+    return truncate(stdout.trim(), 1000);
+}
 function clearKillFlag(session) {
     try {
         node_fs_1.default.rmSync(node_path_1.default.join(session.sessionDir, "kill.flag"), { force: true });
@@ -1761,16 +1834,20 @@ function reconcileOpenCodeSession(db, session) {
         return current;
     }
     const discovered = discoverOpenCodeSession(serverUrl, current);
-    if (!discovered)
+    const localSessionId = readOpenCodeSessionId(current) ?? readOpenCodeSessionIdFromStdout(current);
+    const reconciled = discovered ?? (localSessionId && localSessionId !== current.opencodeSessionId ? localSessionId : null);
+    if (!reconciled)
         return current;
     current = db.updateChimeraSession({
         publicId: current.publicId,
         opencodeServerUrl: serverUrl,
-        opencodeSessionId: discovered
+        opencodeSessionId: reconciled
     });
     writeStatusFile(db, current, {
-        opencodeSessionIdReconciled: discovered,
-        reason: "matched OpenCode session by Chimera session directory"
+        opencodeSessionIdReconciled: reconciled,
+        reason: discovered
+            ? "matched OpenCode session by Chimera session directory"
+            : "recovered OpenCode session id from local Chimera session files after rejecting stale attached id"
     });
     return current;
 }
@@ -1929,8 +2006,11 @@ function deliverPriorityChimeraMessage(db, session, message) {
     const wake = maybeWakeChimeraSession(db, current, message);
     if (!wake.attempted)
         return steer;
+    const woke = wake.started === true;
     return {
         ...steer,
+        ok: steer.ok || woke,
+        mode: steer.ok ? steer.mode : "queue",
         autoWake: wake,
         detail: `${steer.detail}; ${wake.started ? `auto-wake started pid ${wake.pid ?? "unknown"}` : `auto-wake not started: ${wake.reason}`}`
     };
@@ -2052,7 +2132,7 @@ function enrichChimeraSessionForList(db, session, campaignMap) {
         campaignLabel: campaigns.length > 0
             ? campaigns.map((campaign) => `C${campaign.id} [${campaign.status}] ${campaign.title}`).join("; ")
             : "unlinked",
-        resumeHint: chimeraResumeHint()
+        resumeHint: chimeraSessionHint(session)
     };
 }
 function campaignIdsForChimeraSession(db, session) {
@@ -2084,6 +2164,15 @@ function chimeraListAdvisories(activeOnly, all, activeCampaignCount) {
         advisories.push("Default list scope is sessions linked to active campaigns. Use --all to include every historical Chimera session.");
     }
     return advisories;
+}
+function chimeraSessionHint(session) {
+    if (session.status === "starting") {
+        return "Session is starting. Use poll, workflow-snapshot after attachment, send --priority for urgent context, or kill if it should stop. Do not use run while it is starting.";
+    }
+    if (session.status === "running") {
+        return "Session is running. Use poll, workflow-snapshot, send --priority, kill, or close. Do not use run while it is active.";
+    }
+    return chimeraResumeHint();
 }
 function renderSteerPrompt(db, session, message) {
     const metadata = metadataObject(message.metadata) ?? {};

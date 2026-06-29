@@ -403,8 +403,17 @@ try {
   }
   await request("tools/call", {
     name: "proteus_chimera_snapshot",
-    arguments: { root: tmpRoot, id: "CH-0001", body: "MCP Chimera snapshot" }
+    arguments: { root: tmpRoot, id: "CH-0001", body: `MCP Chimera snapshot\n${"MCP large snapshot body ".repeat(500)}` }
   });
+  const largeMcpSnapshotPoll = await request("tools/call", {
+    name: "proteus_chimera_poll",
+    arguments: { root: tmpRoot, id: "CH-0001", peek: true }
+  });
+  const largeMcpSnapshotJson = JSON.parse(String(largeMcpSnapshotPoll.content?.[0]?.text ?? "{}"));
+  const largeMcpSnapshotMessage = largeMcpSnapshotJson.record?.messages?.find((message) => message.kind === "snapshot");
+  if (!largeMcpSnapshotMessage?.bodyTruncated || !largeMcpSnapshotMessage.fullBodyPath || !fs.existsSync(largeMcpSnapshotMessage.fullBodyPath)) {
+    throw new Error("proteus_chimera_poll did not expose large snapshot preview and full body path");
+  }
   const chimeraHeartbeat = await request("tools/call", {
     name: "proteus_chimera_heartbeat",
     arguments: { root: tmpRoot, id: "CH-0001" }

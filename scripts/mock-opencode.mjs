@@ -47,6 +47,15 @@ if (args[0] === "serve") {
 
 if (args[0] === "export") {
   const sessionID = args[1] ?? "ses_mock_unknown";
+  if (process.env.MOCK_OPENCODE_EXPORT_FAIL_ONCE === "1") {
+    const markerPath = path.join(process.cwd(), "opencode", "mock-export-failed-once.marker");
+    if (!fs.existsSync(markerPath)) {
+      fs.mkdirSync(path.dirname(markerPath), { recursive: true });
+      fs.writeFileSync(markerPath, new Date().toISOString() + "\n");
+      console.error(`Exporting session: ${sessionID}`);
+      process.exit(1);
+    }
+  }
   console.log(JSON.stringify({
     info: {
       id: sessionID,

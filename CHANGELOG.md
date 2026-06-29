@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.0.3 - 2026-06-29
+
+### Fixed
+
+- Changed Chimera list item hints so active sessions no longer display stopped-session resume guidance.
+- Treated priority delivery as successful when a stopped session is queued and auto-wake starts cleanly.
+- Reconciled stale attached OpenCode session ids from local Chimera session files before workflow snapshot export.
+- Hardened `chimera workflow-snapshot` against transient OpenCode export failures with short retries, JSON recovery from noisy output, and more useful export diagnostics.
+- Improved Chimera snapshot polling for large agent-authored snapshots by returning bounded previews plus the full `snapshot.md` path and body length metadata.
+
 ## 2.0.2 - 2026-06-29
 
 ### Fixed

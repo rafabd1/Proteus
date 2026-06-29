@@ -95,6 +95,17 @@ snapshots, heartbeats, and checkpoints to observe progress. Intervene when
 strategy, scope, duplicate work, low-ROI drift, blockers, new evidence, or user
 instructions require it.
 
+Large agent snapshots are stored in full at
+`.vros/chimera/sessions/<CH-ID>/snapshot.md`. `chimera poll` returns a bounded
+preview plus `bodyLength`, `bodyTruncated`, and `fullBodyPath` so the
+coordinator can inspect the full snapshot only when needed.
+
+`workflow-snapshot` depends on OpenCode session export. Proteus retries short
+transient export failures and returns export attempt diagnostics, but an export
+failure by itself does not prove the co-agent crashed or lost state. Check
+`poll`, `list --active`, latest snapshots, and `recover` before killing or
+restarting a useful session.
+
 Session state is stored under:
 
 ```text

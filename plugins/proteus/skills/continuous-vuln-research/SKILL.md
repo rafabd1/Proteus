@@ -211,6 +211,9 @@ Coordinator duties:
 - treat `proteus chimera poll` as the authoritative Proteus broker history:
   coordinator messages, agent posts, snapshots, heartbeat, kill/close events,
   and latest snapshots. It is not the full raw OpenCode chat transcript;
+- for large co-agent snapshots, read the bounded preview first. If `poll`
+  marks a snapshot as `bodyTruncated`, use `fullBodyPath` to inspect the full
+  `snapshot.md` only when the complete body is needed for a decision;
 - when the raw OpenCode session history is needed, use the stored
   `opencodeSessionId` with OpenCode's own export/session APIs, for example
   `opencode export <ses_id>`, and keep any imported conclusions summarized back
@@ -222,6 +225,9 @@ Coordinator duties:
   patches, and file payloads, with bounded message count and bounded size per
   message. Proteus exports the raw OpenCode session and filters locally before
   returning the compact snapshot;
+- if `workflow-snapshot` reports an OpenCode export failure, do not assume the
+  co-agent crashed. Check `poll`, `list --active`, latest snapshots, heartbeat,
+  and `recover` before killing, restarting, or creating a replacement session;
 - kill looping or low-ROI sessions with `proteus chimera kill --root <workspace>`;
 - close sessions with a verdict and summary;
 - independently validate any agent claim before recording it as a finding.

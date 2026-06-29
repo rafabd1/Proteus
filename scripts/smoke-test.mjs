@@ -403,9 +403,16 @@ try {
   if (chimeraBroadcast.delivered.length !== 0 || !chimeraBroadcast.skipped.some((entry) => entry.publicId === "CH-0001" && entry.reason === "status stopped")) {
     throw new Error(`chimera broadcast should skip stopped sessions: ${JSON.stringify(chimeraBroadcast)}`);
   }
-  run(["chimera", "snapshot", "--id", "CH-0001", "--body", "Confirmed smoke snapshot"]);
-  if (!fs.readFileSync(path.join(tmpRoot, ".vros/chimera/sessions/CH-0001/snapshot.md"), "utf8").includes("Confirmed smoke snapshot")) {
+  const largeSnapshotBody = `Confirmed smoke snapshot\n${"GLQL quoted code block ".repeat(500)}`;
+  run(["chimera", "snapshot", "--id", "CH-0001", "--body", largeSnapshotBody]);
+  const snapshotPath = path.join(tmpRoot, ".vros/chimera/sessions/CH-0001/snapshot.md");
+  if (!fs.readFileSync(snapshotPath, "utf8").includes("Confirmed smoke snapshot")) {
     throw new Error("chimera snapshot did not write snapshot.md");
+  }
+  const largeSnapshotPoll = JSON.parse(run(["chimera", "poll", "--id", "CH-0001", "--peek"]));
+  const largeSnapshotMessage = largeSnapshotPoll.messages.find((message) => message.kind === "snapshot");
+  if (!largeSnapshotMessage?.bodyTruncated || largeSnapshotMessage.bodyLength <= largeSnapshotMessage.body.length || largeSnapshotMessage.fullBodyPath !== snapshotPath || !fs.readFileSync(largeSnapshotMessage.fullBodyPath, "utf8").includes("GLQL quoted code block")) {
+    throw new Error(`chimera poll did not expose large snapshot preview and full body path: ${JSON.stringify(largeSnapshotMessage)}`);
   }
   const chimeraHeartbeat = JSON.parse(run(["chimera", "heartbeat", "--id", "CH-0001"]));
   if (chimeraHeartbeat.killed !== false || chimeraHeartbeat.session?.publicId !== "CH-0001" || chimeraHeartbeat.session?.status !== "stopped") {
@@ -579,9 +586,13 @@ try {
   if (!fs.existsSync(chimeraWorkflowSnapshot.files.jsonPath) || !fs.existsSync(chimeraWorkflowSnapshot.files.markdownPath)) {
     throw new Error("chimera workflow-snapshot did not write compact snapshot files");
   }
+  const retryWorkflowSnapshot = JSON.parse(run(["chimera", "workflow-snapshot", "--id", "CH-0002", "--limit", "1", "--max-message-chars", "80"], tmpRoot, { MOCK_OPENCODE_EXPORT_FAIL_ONCE: "1" }));
+  if (retryWorkflowSnapshot.export.attempts.length < 2 || retryWorkflowSnapshot.export.attempts[0].parsed !== false || retryWorkflowSnapshot.messages.length !== 1) {
+    throw new Error(`chimera workflow-snapshot did not retry a transient OpenCode export failure: ${JSON.stringify(retryWorkflowSnapshot.export)}`);
+  }
   const chimeraDirectSend = JSON.parse(run(["chimera", "send", "--id", "CH-0002", "--message", "Smoke direct steer", "--priority"]));
-  if (chimeraDirectSend.directDelivery?.mode !== "steer" || chimeraDirectSend.directDelivery?.ok !== true) {
-    throw new Error(`chimera priority send did not steer active OpenCode session: ${JSON.stringify(chimeraDirectSend.directDelivery)}`);
+  if (chimeraDirectSend.directDelivery?.ok !== true || !["steer", "queue"].includes(chimeraDirectSend.directDelivery?.mode)) {
+    throw new Error(`chimera priority send did not steer or wake the Chimera session: ${JSON.stringify(chimeraDirectSend.directDelivery)}`);
   }
   run(
     ["chimera", "send", "--root", tmpRoot, "--to-id", "CH-0002", "--message", "Smoke inferred source id"],
@@ -676,8 +687,8 @@ try {
   if (!duplicateCouncilTurn.includes("already posted a council turn")) {
     throw new Error("chimera council allowed a duplicate turn for the same agent and round");
   }
-  if (chimeraCouncilTurnOne.nextCue.directDelivery?.mode !== "steer" || chimeraCouncilTurnOne.nextCue.directDelivery?.ok !== true) {
-    throw new Error(`chimera council automatic next cue did not steer attached OpenCode session: ${JSON.stringify(chimeraCouncilTurnOne.nextCue.directDelivery)}`);
+  if (chimeraCouncilTurnOne.nextCue.directDelivery?.ok !== true || !["steer", "queue"].includes(chimeraCouncilTurnOne.nextCue.directDelivery?.mode)) {
+    throw new Error(`chimera council automatic next cue did not steer or wake the next session: ${JSON.stringify(chimeraCouncilTurnOne.nextCue.directDelivery)}`);
   }
   const chimeraCouncilTurnTwo = JSON.parse(run(["chimera", "council", "turn", "--id", "CH-0002", "--council-id", councilId, "--round", "1", "--body", "CH-0002 observation"]));
   if (chimeraCouncilTurnTwo.nextCue !== null || chimeraCouncilTurnTwo.roundComplete !== true) {
