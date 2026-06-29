@@ -1,6 +1,6 @@
 {
   "name": "@rafabd1/proteus",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "A plugin for Claude Code and Codex that coordinates structured, continuous vulnerability research against arbitrary codebases.",
   "type": "commonjs",
   "bin": {

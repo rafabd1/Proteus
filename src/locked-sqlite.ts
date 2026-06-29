@@ -137,7 +137,7 @@ class SqliteFileLock {
           if (token) this.release(token);
         };
       } catch (error) {
-        if (!isAlreadyExists(error)) throw error;
+        if (!isLockContention(error)) throw error;
         this.removeReusableLock();
         if (Date.now() - started > LOCK_WAIT_MS) {
           throw new Error(`Proteus SQLite lock timeout after ${LOCK_WAIT_MS}ms: ${this.lockDir}`);
@@ -238,8 +238,10 @@ function isProcessAlive(pid: number): boolean {
   }
 }
 
-function isAlreadyExists(error: unknown): boolean {
-  return typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === "EEXIST";
+function isLockContention(error: unknown): boolean {
+  if (typeof error !== "object" || error === null || !("code" in error)) return false;
+  const code = (error as { code?: string }).code;
+  return code === "EEXIST" || code === "EPERM" || code === "EACCES" || code === "EBUSY" || code === "ENOTEMPTY";
 }
 
 function isSqliteBusy(error: unknown): boolean {

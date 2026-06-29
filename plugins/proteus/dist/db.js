@@ -2031,6 +2031,7 @@ function normalizeChimeraTimeout(value) {
 function normalizeChimeraStatus(value) {
     if (value === "starting" ||
         value === "running" ||
+        value === "ready" ||
         value === "waiting" ||
         value === "killed" ||
         value === "closed" ||

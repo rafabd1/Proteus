@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  <img alt="Version" src="https://img.shields.io/badge/version-2.0.0-2f6feb" />
+  <img alt="Version" src="https://img.shields.io/badge/version-2.0.1-2f6feb" />
   <img alt="Node.js" src="https://img.shields.io/badge/node-%3E%3D24-43853d" />
   <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" />
   <img alt="Runtime" src="https://img.shields.io/badge/runtime-CLI%20%2B%20MCP%20%2B%20Skills-7c3aed" />
@@ -95,7 +95,7 @@ proteus --version
 Expected:
 
 ```text
-@rafabd1/proteus 2.0.0
+@rafabd1/proteus 2.0.1
 ```
 
 ### Codex

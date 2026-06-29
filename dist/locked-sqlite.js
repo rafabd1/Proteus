@@ -138,7 +138,7 @@ class SqliteFileLock {
                 };
             }
             catch (error) {
-                if (!isAlreadyExists(error))
+                if (!isLockContention(error))
                     throw error;
                 this.removeReusableLock();
                 if (Date.now() - started > LOCK_WAIT_MS) {
@@ -248,8 +248,11 @@ function isProcessAlive(pid) {
         return false;
     }
 }
-function isAlreadyExists(error) {
-    return typeof error === "object" && error !== null && "code" in error && error.code === "EEXIST";
+function isLockContention(error) {
+    if (typeof error !== "object" || error === null || !("code" in error))
+        return false;
+    const code = error.code;
+    return code === "EEXIST" || code === "EPERM" || code === "EACCES" || code === "EBUSY" || code === "ENOTEMPTY";
 }
 function isSqliteBusy(error) {
     if (!(error instanceof Error))

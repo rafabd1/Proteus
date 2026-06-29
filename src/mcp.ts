@@ -34,6 +34,7 @@ import {
   sendChimeraMessage,
   snapshotChimeraSession,
   snapshotChimeraWorkflow,
+  startChimeraRunBackground,
   startChimeraSession,
   startChimeraCouncil,
   startChimeraSwarm,
@@ -190,7 +191,7 @@ const tools: ToolDefinition[] = [
   {
     name: "proteus_chimera_start",
     title: "Start Chimera Agent",
-    description: "Create a bounded Chimera session and optionally run OpenCode once.",
+    description: "Create a bounded Chimera session and optionally launch OpenCode. MCP launches run=true in the background unless a positive timeout is provided.",
     inputSchema: schema(
       {
         root: stringProp("Target root path."),
@@ -203,14 +204,16 @@ const tools: ToolDefinition[] = [
         model: stringProp("Runtime model override."),
         provider: stringProp("Legacy alias for runtime variant override."),
         variant: stringProp("Runtime variant override, for example high."),
-        timeout: numberProp("Timeout seconds for --run. Omit or pass 0 for no timeout."),
+        timeout: numberProp("Timeout seconds for --run. Omit or pass 0 to launch in the background with no wall-clock timeout."),
         run: booleanProp("Run OpenCode once now.")
       },
       ["root", "role", "goal"]
     ),
     handler: (input) =>
-      withDb(str(input.root), (db) =>
-        toolEnvelope(startChimeraSession(db, {
+      withDb(str(input.root), (db) => {
+        const timeout = maybeNum(input.timeout);
+        const boundedRun = input.run === true && isPositiveTimeout(timeout);
+        const started = startChimeraSession(db, {
           role: str(input.role),
           goal: str(input.goal),
           accessMode: chimeraAccess(input.access),
@@ -220,10 +223,18 @@ const tools: ToolDefinition[] = [
           model: maybeStr(input.model),
           provider: maybeStr(input.provider),
           variant: maybeStr(input.variant),
-          timeoutSec: maybeNum(input.timeout),
-          run: input.run === true
-        }))
-      )
+          timeoutSec: timeout,
+          run: boundedRun
+        });
+        if (input.run === true && !boundedRun) {
+          return toolEnvelope({
+            ...started,
+            backgroundRun: startChimeraRunBackground(db, started.session.publicId, timeout),
+            session: db.getChimeraSession(started.session.publicId)
+          });
+        }
+        return toolEnvelope(started);
+      })
   },
   {
     name: "proteus_chimera_swarm",
@@ -380,14 +391,19 @@ const tools: ToolDefinition[] = [
   {
     name: "proteus_chimera_run",
     title: "Run Existing Chimera Session",
-    description: "Run or resume OpenCode for an existing Chimera session without creating a new lab.",
+    description: "Run or resume OpenCode for an existing Chimera session without creating a new lab. MCP defaults to a background launch when timeout is omitted or 0.",
     inputSchema: schema(
-      { root: stringProp("Target root path."), id: stringProp("Chimera session id."), timeout: numberProp("Timeout seconds. Omit or pass 0 for no timeout.") },
+      { root: stringProp("Target root path."), id: stringProp("Chimera session id."), timeout: numberProp("Timeout seconds. Omit or pass 0 to launch in the background with no wall-clock timeout."), background: booleanProp("Force background launch even with a positive timeout.") },
       ["root", "id"]
     ),
     handler: (input) => withDb(str(input.root), (db) => {
       const id = str(input.id);
-      const run = runChimeraSession(db, id, maybeNum(input.timeout));
+      const timeout = maybeNum(input.timeout);
+      if (input.background === true || !isPositiveTimeout(timeout)) {
+        const backgroundRun = startChimeraRunBackground(db, id, timeout);
+        return toolEnvelope({ backgroundRun, session: db.getChimeraSession(id) });
+      }
+      const run = runChimeraSession(db, id, timeout);
       return toolEnvelope({ run, session: db.getChimeraSession(id) });
     })
   },
@@ -1759,6 +1775,10 @@ function num(value: unknown, fallback: number): number {
 
 function maybeNum(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function isPositiveTimeout(value: number | undefined): boolean {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
 
 function maybeRoundStatus(value: unknown): RoundStatus | undefined {
