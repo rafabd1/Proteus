@@ -147,6 +147,9 @@ Post progress:
 proteus chimera post --root <workspace-root> --kind message --body "..."
 ```
 
+Do not add `--priority` when posting to the coordinator. Priority steering is
+for messages whose destination is another OpenCode-backed Chimera agent.
+
 Post findings or blockers:
 
 ```text
@@ -183,8 +186,10 @@ the lab. If you must send from outside your session directory, use
 `--from-id <CH-ID>`:
 
 ```text
-proteus chimera send --root <workspace-root> --to-id <CH-ID> --message "..." --priority
+proteus chimera send --root <workspace-root> --to-id <CH-ID> --message "..."
 ```
+
+Add `--priority` only when that peer should be nudged to poll soon.
 
 Treat shared chat as normal collaborative context, not a queue that must be
 answered item by item. You do not need to respond to every broadcast. If the

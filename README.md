@@ -214,7 +214,8 @@ Common operations:
 ```powershell
 proteus chimera start --root C:\path\to\target --role chaining --goal "Develop non-obvious chains from branch B7"
 proteus chimera poll --root C:\path\to\target --unread
-proteus chimera send --root C:\path\to\target --id CH-0001 --message "Focus on policy side effects." --priority
+proteus chimera send --root C:\path\to\target --id CH-0001 --message "Focus on policy side effects."
+proteus chimera run --root C:\path\to\target --id CH-0001 --message "Resume this same front with the updated priority."
 proteus chimera workflow-snapshot --root C:\path\to\target --id CH-0001
 proteus chimera recover --root C:\path\to\target --id CH-0001
 proteus chimera kill --root C:\path\to\target --id CH-0001 --reason "Looping without new testable signal"

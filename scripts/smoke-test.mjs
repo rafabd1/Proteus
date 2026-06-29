@@ -489,13 +489,16 @@ try {
   if (!explorerAgentFile.includes("edit: deny") || !explorerAgentFile.includes("webfetch: deny") || !explorerAgentFile.includes("websearch: deny")) {
     throw new Error("explorer Chimera agent file did not deny edit and web permissions by default");
   }
-  const chimeraRunExisting = run(["chimera", "run", "--id", "CH-0002", "--timeout", "10"]);
+  const chimeraRunExisting = run(["chimera", "run", "--id", "CH-0002", "--timeout", "10", "--message", "Smoke resume instruction"]);
   if (!chimeraRunExisting.includes('"ok": true') || !chimeraRunExisting.includes('"ses_mock_CH-0002"')) {
     throw new Error("chimera run did not reuse existing OpenCode session/lab");
   }
   const chimeraRunRecord = JSON.parse(fs.readFileSync(path.join(tmpRoot, ".vros/chimera/sessions/CH-0002/opencode/run.json"), "utf8"));
   if (!Array.isArray(chimeraRunRecord.args) || !chimeraRunRecord.args.includes("--pure")) {
     throw new Error("chimera run should invoke OpenCode with --pure to avoid per-session plugin dependency installs");
+  }
+  if (!chimeraRunRecord.args.some((arg) => String(arg).includes("Smoke resume instruction"))) {
+    throw new Error("chimera run --message did not pass the resume instruction to OpenCode");
   }
   const chimeraWorkflowSnapshot = JSON.parse(run(["chimera", "workflow-snapshot", "--id", "CH-0002", "--limit", "3", "--max-message-chars", "80"]));
   const workflowSnapshotText = JSON.stringify(chimeraWorkflowSnapshot);

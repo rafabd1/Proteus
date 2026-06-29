@@ -343,7 +343,7 @@ try {
   }
   const chimeraRunAfterWrongAttach = await request("tools/call", {
     name: "proteus_chimera_run",
-    arguments: { root: tmpRoot, id: "CH-0001", timeout: 10 }
+    arguments: { root: tmpRoot, id: "CH-0001", timeout: 10, message: "MCP resume instruction" }
   });
   const chimeraRunAfterWrongAttachJson = JSON.parse(String(chimeraRunAfterWrongAttach.content?.[0]?.text ?? "{}"));
   if (chimeraRunAfterWrongAttachJson.record?.run?.exitCode !== 0 || chimeraRunAfterWrongAttachJson.record?.session?.opencodeSessionId !== "ses_mock_CH-0001") {
@@ -352,6 +352,9 @@ try {
   const chimeraRunAfterWrongAttachRecord = JSON.parse(fs.readFileSync(path.join(tmpRoot, ".vros", "chimera", "sessions", "CH-0001", "opencode", "run.json"), "utf8"));
   if (chimeraRunAfterWrongAttachRecord.args.includes("ses_mock_wrong_workspace_CH_0001")) {
     throw new Error("proteus_chimera_run reused a stale OpenCode session id from another workspace");
+  }
+  if (!chimeraRunAfterWrongAttachRecord.args.some((arg) => String(arg).includes("MCP resume instruction"))) {
+    throw new Error("proteus_chimera_run did not pass the MCP resume instruction to OpenCode");
   }
   const chimeraWorkflowSnapshot = await request("tools/call", {
     name: "proteus_chimera_workflow_snapshot",

@@ -53,19 +53,23 @@ proteus chimera start --root C:\path\to\target --role chaining --goal "Develop n
 ```
 
 `start` creates the lab, writes the dossier and contract, and starts OpenCode
-bootstrap automatically. Use `run` only when intentionally resuming or
-recovering an existing non-running session:
+bootstrap automatically. `waiting` means the Chimera session is persisted and
+reusable, but no Proteus-controlled OpenCode process is necessarily listening.
+Use `run` only when intentionally resuming or recovering an existing
+non-running session into another work cycle:
 
 ```powershell
-proteus chimera run --root C:\path\to\target --id CH-0001
+proteus chimera run --root C:\path\to\target --id CH-0001 --message "Continue the same front, but prioritize parser side effects."
 ```
 
 Create new co-agents only when there is a distinct research front, role, model,
 or lab need. For continuation of the same bounded front, inspect the existing
-session with `poll`, `workflow-snapshot`, and `heartbeat`, then use `send` for
-targeted steering or `run` only when the session is actually not running. `run`
-and priority `wake` do not time out by default, so an active OpenCode agent can
-keep working until it finishes, blocks, is killed, or is closed.
+session with `poll`, `workflow-snapshot`, and `heartbeat`, then use normal
+`send` to queue a message, `send --priority` to nudge a parked/live agent to
+poll, or `run --message` only when the session should do another full work
+cycle. `run` and priority `wake` do not time out by default, so an active
+OpenCode agent can keep working until it finishes, blocks, is killed, or is
+closed.
 
 If status, pid, or OpenCode session attachment looks stale, use `recover`
 before deciding to start a new session or run an existing one again:
@@ -191,6 +195,14 @@ Coordinator to one agent:
 proteus chimera send --root C:\path\to\target --id CH-0001 --message "Drop parser diffing and focus on policy side effects."
 ```
 
+This stores the message in the Proteus inbox only. It does not re-run the
+session. Add `--priority` when the destination should be steered or woken to
+poll soon:
+
+```powershell
+proteus chimera send --root C:\path\to\target --id CH-0001 --message "Poll now and answer this scope question." --priority
+```
+
 Coordinator to all active agents:
 
 ```powershell
@@ -206,7 +218,7 @@ proteus chimera post --root C:\path\to\target --kind message --body "Current sta
 Agent to agent from inside a Chimera lab:
 
 ```powershell
-proteus chimera send --root C:\path\to\target --to-id CH-0002 --message "This side effect may affect your branch." --priority
+proteus chimera send --root C:\path\to\target --to-id CH-0002 --message "This side effect may affect your branch."
 ```
 
 For commands executed by a Chimera agent inside its own session directory,
@@ -230,12 +242,9 @@ proteus chimera poll --root C:\path\to\target --unread --agent
 
 Priority messages update the destination `notifications.json`. If an OpenCode
 server and `opencodeSessionId` are attached, Proteus also sends a direct
-OpenCode steer ping telling the agent to poll Proteus. The canonical message
-still lives in Proteus.
-
-```powershell
-proteus chimera send --root C:\path\to\target --id CH-0001 --message "Poll now and answer this scope question." --priority
-```
+OpenCode steer ping telling the agent to poll Proteus. If the session is parked,
+Proteus uses a compact wake prompt focused on the queued message rather than
+re-running the whole dossier. The canonical message still lives in Proteus.
 
 ## Snapshots
 

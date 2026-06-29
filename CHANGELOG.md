@@ -7,13 +7,14 @@
 - Removed the separate Chimera relay command surface. Direct single-recipient messages now use `chimera send`/`proteus_chimera_send` for coordinator-to-agent and agent-to-agent flows, with optional source metadata handled by the unified path.
 - Changed Chimera `start` to auto-start OpenCode bootstrap by default and report `starting` during attachment instead of leaving new sessions in an ambiguous ready state.
 - Added Chimera session recovery for stale or inconsistent pid, status, and OpenCode session attachment state, including `chimera recover` and MCP `proteus_chimera_recover`.
-- Hardened `chimera run` so manual runs do not compete with sessions that are already starting or running.
+- Hardened `chimera run` so manual runs do not compete with sessions that are already starting or running, and added optional resume instructions through `--message`/`message`.
+- Changed priority delivery for parked sessions to use compact wake behavior for queued messages instead of treating every priority message as a full research rerun.
 - Improved Chimera polling visibility with control status, priority-pending state, delivery state, and recommended next command.
 - Accepted prefixed numeric ids such as `B8` in CLI/MCP numeric-id parsing.
 
 ### Changed
 
-- Updated coordinator and Chimera docs/skills to explain when to use `start`, `send`, `broadcast`, `poll`, `workflow-snapshot`, `recover`, `run`, `kill`, and `close`.
+- Updated coordinator and Chimera docs/skills to explain when to use `start`, `send`, `broadcast`, `poll`, `workflow-snapshot`, `recover`, `run`, `kill`, and `close`, including the difference between queued messages, priority wake, and `run --message` resume.
 - Expanded CLI and MCP smoke coverage for auto-start, recovery, unified direct messaging, and prefixed branch ids.
 
 ## 2.0.0 - 2026-06-27

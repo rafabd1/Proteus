@@ -67,6 +67,7 @@ export interface ChimeraBackgroundRunResult {
   stderrPath: string;
   pidPath: string;
   timeoutSec: number | null;
+  instruction: boolean;
   detail: string;
 }
 
@@ -850,7 +851,12 @@ export function startChimeraSwarm(db: ProteusDb, plan: ChimeraSwarmPlan): {
   return { sessions, maxAgents: config.maxAgents };
 }
 
-export function runChimeraSession(db: ProteusDb, publicId: string, timeoutSec?: number, options: { internalRun?: boolean } = {}): ChimeraRunResult {
+export function runChimeraSession(
+  db: ProteusDb,
+  publicId: string,
+  timeoutSec?: number,
+  options: { internalRun?: boolean; instruction?: string } = {}
+): ChimeraRunResult {
   const config = getChimeraConfig();
   const session = recoverChimeraRuntime(db, requireChimeraSession(db, publicId)).session;
   if (!options.internalRun && (session.status === "running" || session.status === "starting")) {
@@ -860,7 +866,18 @@ export function runChimeraSession(db: ProteusDb, publicId: string, timeoutSec?: 
   if (!fs.existsSync(promptPath)) throw new Error(`Missing Chimera prompt: ${promptPath}`);
   const running = db.updateChimeraSession({ publicId, status: "running" });
   writeStatusFile(db, running, { runStartedAt: new Date().toISOString() });
-  const run = runOpenCodeOnce(db, running, promptPath, config, resolveRunTimeoutSec(config, timeoutSec));
+  const instruction = renderRunInstruction(running, options.instruction);
+  if (options.instruction?.trim()) {
+    db.addChimeraMessage({
+      publicId: running.publicId,
+      direction: "coordinator_to_agent",
+      kind: "message",
+      body: options.instruction.trim(),
+      metadata: { source: "chimera_run_instruction" },
+      readByAgent: false
+    });
+  }
+  const run = runOpenCodeOnce(db, running, promptPath, config, resolveRunTimeoutSec(config, timeoutSec), instruction);
   const updated = db.updateChimeraSession({
     publicId,
     status: chimeraStatusAfterRun(run, db.getChimeraSession(publicId)),
@@ -870,7 +887,12 @@ export function runChimeraSession(db: ProteusDb, publicId: string, timeoutSec?: 
   return run;
 }
 
-export function startChimeraRunBackground(db: ProteusDb, publicId: string, timeoutSec?: number): ChimeraBackgroundRunResult {
+export function startChimeraRunBackground(
+  db: ProteusDb,
+  publicId: string,
+  timeoutSec?: number,
+  options: { instruction?: string } = {}
+): ChimeraBackgroundRunResult {
   const config = getChimeraConfig();
   const session = recoverChimeraRuntime(db, requireChimeraSession(db, publicId)).session;
   if (session.status === "running" || session.status === "starting") {
@@ -899,6 +921,7 @@ export function startChimeraRunBackground(db: ProteusDb, publicId: string, timeo
     "--internal-run"
   ];
   if (resolvedTimeout !== null) args.push("--timeout", String(resolvedTimeout));
+  if (options.instruction?.trim()) args.push("--message", options.instruction.trim());
   const child = spawnHiddenBackground(process.execPath, args, {
     cwd: session.sessionDir,
     stdoutPath: backgroundLogPath,
@@ -911,6 +934,7 @@ export function startChimeraRunBackground(db: ProteusDb, publicId: string, timeo
     publicId: starting.publicId,
     pid: child.pid ?? null,
     timeoutSec: resolvedTimeout,
+    instruction: options.instruction?.trim() ? true : false,
     logPath: toRelative(db.targetRoot, backgroundLogPath),
     stderrPath: toRelative(db.targetRoot, backgroundErrPath),
     createdAt: new Date().toISOString()
@@ -923,6 +947,7 @@ export function startChimeraRunBackground(db: ProteusDb, publicId: string, timeo
     stderrPath: backgroundErrPath,
     pidPath: backgroundPidPath,
     timeoutSec: resolvedTimeout,
+    instruction: options.instruction?.trim() ? true : false,
     detail: resolvedTimeout === null
       ? "started Chimera run in the background with no wall-clock timeout"
       : `started Chimera run in the background with timeout ${resolvedTimeout}s`
@@ -1308,6 +1333,21 @@ function runOpenCodeOnce(
   };
 }
 
+function renderRunInstruction(session: ChimeraSessionRow, instruction?: string): string {
+  const trimmed = instruction?.trim();
+  const lines = [
+    `Continue the existing Proteus Chimera session ${session.publicId}.`,
+    "Reuse the persisted dossier, contract, lab, skills, Proteus memory, OpenCode session history, and current assigned scope instead of treating this as a brand new co-agent.",
+    "Poll Proteus messages before long work, dedupe against local Proteus memory before deep work, and post a concise final snapshot when the run completes or blocks."
+  ];
+  if (trimmed) {
+    lines.push("", "Coordinator instruction for this run:", trimmed);
+  } else {
+    lines.push("", "No extra coordinator instruction was provided for this run. Continue the existing goal and stop condition with the next high-ROI move.");
+  }
+  return lines.join("\n");
+}
+
 function renderDossier(db: ProteusDb, session: ChimeraSessionRow, targetName: string): string {
   const campaign = session.campaignId ? db.getCampaign(session.campaignId) : null;
   const round = session.roundId ? db.getRound(session.roundId) : null;
@@ -1383,12 +1423,14 @@ Communication commands:
 - ${proteusCommand} --root "${db.targetRoot}" chimera poll --id ${session.publicId} --unread --agent
 - ${proteusCommand} --root "${db.targetRoot}" chimera post --id ${session.publicId} --kind message --body "..."
 - ${session.campaignId ? `${proteusCommand} --root "${db.targetRoot}" campaign resume --id ${session.campaignId}` : `${proteusCommand} --root "${db.targetRoot}" campaign resume`}
-- ${proteusCommand} --root "${db.targetRoot}" chimera broadcast --message "..." --priority
-- ${proteusCommand} --root "${db.targetRoot}" chimera send --to-id CH-0000 --message "..." --priority
+- ${proteusCommand} --root "${db.targetRoot}" chimera broadcast --message "..."
+- ${proteusCommand} --root "${db.targetRoot}" chimera send --to-id CH-0000 --message "..."
 - ${proteusCommand} --root "${db.targetRoot}" chimera council accept --id ${session.publicId} --council-id CO-... --body "ready"
 - ${proteusCommand} --root "${db.targetRoot}" chimera council turn --id ${session.publicId} --council-id CO-... --round 1 --body "..."
 - ${proteusCommand} --root "${db.targetRoot}" chimera snapshot --id ${session.publicId} --body "..."
 - ${proteusCommand} --root "${db.targetRoot}" chimera heartbeat --id ${session.publicId}
+
+Use --priority only when sending to another OpenCode-backed Chimera agent that should be nudged to poll soon. Do not use --priority when posting to the coordinator.
 `;
 }
 
@@ -2048,7 +2090,8 @@ function chimeraControlStatus(db: ProteusDb, session: ChimeraSessionRow): Chimer
   let recommendedNextCommand: string | null = null;
   if (!closed && priorityPending) {
     if (deliveryState === "queued") {
-      recommendedNextCommand = `proteus chimera run --root "${db.targetRoot}" --id ${session.publicId}`;
+      const latestPriority = unreadMessages.find(isPriorityMessage);
+      recommendedNextCommand = `proteus chimera wake --root "${db.targetRoot}" --id ${session.publicId}${latestPriority ? ` --message-id ${latestPriority.id}` : ""}`;
     } else if (deliveryState === "starting") {
       recommendedNextCommand = `proteus chimera poll --root "${db.targetRoot}" --id ${session.publicId} --unread`;
     } else {
@@ -2143,16 +2186,6 @@ function maybeWakeChimeraSession(db: ProteusDb, session: ChimeraSessionRow, mess
   if (session.status === "closed" || session.status === "killed" || session.status === "failed") {
     return { attempted: false, started: false, pid: null, reason: `session is ${session.status}` };
   }
-  if (!session.opencodeSessionId) {
-    const run = startChimeraRunBackground(db, session.publicId);
-    return {
-      attempted: true,
-      started: run.started,
-      pid: run.pid,
-      reason: "session had no OpenCode session id; bootstrap run started",
-      logPath: toRelative(db.targetRoot, run.logPath)
-    };
-  }
   const config = getChimeraConfig();
   const promptPath = path.join(session.sessionDir, "opencode", "prompt.md");
   if (!fs.existsSync(promptPath)) {
@@ -2194,7 +2227,7 @@ function maybeWakeChimeraSession(db: ProteusDb, session: ChimeraSessionRow, mess
     attempted: true,
     started: true,
     pid: child.pid ?? null,
-    reason: "priority message queued for a non-running session",
+    reason: "priority message queued for a non-running session; compact wake started",
     logPath: toRelative(db.targetRoot, wakeLogPath)
   };
 }

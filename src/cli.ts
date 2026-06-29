@@ -295,7 +295,10 @@ function cmdChimera(db: ProteusDb, subcommand: string | undefined, parsed: Parse
     case "run":
       {
         const id = requiredString(parsed, "id");
-        const run = runChimeraSession(db, id, getNumber(parsed, "timeout"), { internalRun: getBoolean(parsed, "internal-run") });
+        const run = runChimeraSession(db, id, getNumber(parsed, "timeout"), {
+          internalRun: getBoolean(parsed, "internal-run"),
+          instruction: getString(parsed, "message") ?? getString(parsed, "instruction")
+        });
         console.log(JSON.stringify({ ok: true, run, session: db.getChimeraSession(id) }, null, 2));
       }
       return;
@@ -1582,7 +1585,8 @@ Usage:
   proteus chimera swarm --root <path> --plan <json> [--run]
   proteus chimera council start|accept|open-round|cue-turn|turn|status|close --root <path>
   proteus chimera send|broadcast|post|snapshot|workflow-snapshot|heartbeat|run|wake|poll|list|recover|kill|close --root <path>
-  proteus chimera run|wake --root <path> --id <CH-ID> [--timeout <seconds|0>]
+  proteus chimera run --root <path> --id <CH-ID> [--message <text>] [--timeout <seconds|0>]
+  proteus chimera wake --root <path> --id <CH-ID> [--timeout <seconds|0>]
   proteus chimera send --root <path> --id <CH-ID> --message <text> [--priority]
   proteus chimera send --root <path> --to-id <CH-ID> --message <text> [--from-id <CH-ID>] [--priority]
   proteus chimera post|snapshot|heartbeat --root <path> [--id <CH-ID>]

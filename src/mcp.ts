@@ -358,19 +358,27 @@ const tools: ToolDefinition[] = [
   {
     name: "proteus_chimera_run",
     title: "Run Existing Chimera Session",
-    description: "Run or resume OpenCode for an existing Chimera session without creating a new lab. MCP defaults to a background launch when timeout is omitted or 0.",
+    description: "Run or resume OpenCode for an existing Chimera session without creating a new lab. Use message/instruction to pass the coordinator's current resume prompt. MCP defaults to a background launch when timeout is omitted or 0.",
     inputSchema: schema(
-      { root: stringProp("Target root path."), id: stringProp("Chimera session id."), timeout: numberProp("Timeout seconds. Omit or pass 0 to launch in the background with no wall-clock timeout."), background: booleanProp("Force background launch even with a positive timeout.") },
+      {
+        root: stringProp("Target root path."),
+        id: stringProp("Chimera session id."),
+        message: stringProp("Optional coordinator instruction for this resume run."),
+        instruction: stringProp("Alias of message. Optional coordinator instruction for this resume run."),
+        timeout: numberProp("Timeout seconds. Omit or pass 0 to launch in the background with no wall-clock timeout."),
+        background: booleanProp("Force background launch even with a positive timeout.")
+      },
       ["root", "id"]
     ),
     handler: (input) => withDb(str(input.root), (db) => {
       const id = str(input.id);
       const timeout = maybeNum(input.timeout);
+      const instruction = maybeStr(input.message) ?? maybeStr(input.instruction);
       if (input.background === true || !isPositiveTimeout(timeout)) {
-        const backgroundRun = startChimeraRunBackground(db, id, timeout);
+        const backgroundRun = startChimeraRunBackground(db, id, timeout, { instruction });
         return toolEnvelope({ backgroundRun, session: db.getChimeraSession(id) });
       }
-      const run = runChimeraSession(db, id, timeout);
+      const run = runChimeraSession(db, id, timeout, { instruction });
       return toolEnvelope({ run, session: db.getChimeraSession(id) });
     })
   },
