@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8"));
@@ -92,7 +92,6 @@ try {
     "proteus_chimera_swarm",
     "proteus_chimera_council",
     "proteus_chimera_broadcast",
-    "proteus_chimera_relay",
     "proteus_chimera_send",
     "proteus_chimera_post",
     "proteus_chimera_snapshot",
@@ -102,6 +101,7 @@ try {
     "proteus_chimera_attach_opencode",
     "proteus_chimera_poll",
     "proteus_chimera_list",
+    "proteus_chimera_recover",
     "proteus_chimera_kill",
     "proteus_chimera_close",
     "proteus_ingest",
@@ -282,8 +282,16 @@ try {
     }
   });
   const chimeraStartText = String(chimeraStart.content?.[0]?.text ?? "");
-  if (!chimeraStartText.includes('"publicId": "CH-0001"') || !chimeraStartText.includes('"accessMode": "editor"') || !chimeraStartText.includes('"status": "ready"')) {
+  if (!chimeraStartText.includes('"publicId": "CH-0001"') || !chimeraStartText.includes('"accessMode": "editor"') || !chimeraStartText.includes('"backgroundRun"') || !chimeraStartText.includes('"status": "starting"')) {
     throw new Error("proteus_chimera_start did not create editor CH-0001");
+  }
+  const chimeraRecover = await request("tools/call", {
+    name: "proteus_chimera_recover",
+    arguments: { root: tmpRoot, id: "CH-0001" }
+  });
+  const chimeraRecoverText = String(chimeraRecover.content?.[0]?.text ?? "");
+  if (!chimeraRecoverText.includes('"publicId": "CH-0001"') || !chimeraRecoverText.includes('"controlStatus"')) {
+    throw new Error("proteus_chimera_recover did not return reconciled session and control status");
   }
   const invalidAttach = await requestFail("tools/call", {
     name: "proteus_chimera_attach_opencode",
@@ -292,17 +300,18 @@ try {
   if (!invalidAttach.includes("Expected non-empty string")) {
     throw new Error("proteus_chimera_attach_opencode should require an OpenCode session id");
   }
-  const chimeraRun = await request("tools/call", {
-    name: "proteus_chimera_run",
-    arguments: { root: tmpRoot, id: "CH-0001", timeout: 10 }
+  await waitForFile(path.join(tmpRoot, ".vros", "chimera", "sessions", "CH-0001", "opencode", "run.json"), 10000);
+  const chimeraRunRecover = await request("tools/call", {
+    name: "proteus_chimera_recover",
+    arguments: { root: tmpRoot, id: "CH-0001" }
   });
-  const chimeraRunJson = JSON.parse(String(chimeraRun.content?.[0]?.text ?? "{}"));
-  if (chimeraRunJson.record?.run?.exitCode !== 0 || chimeraRunJson.record?.session?.opencodeSessionId !== "ses_mock_CH-0001") {
-    throw new Error("proteus_chimera_run did not attach the mock OpenCode session");
+  const chimeraRunJson = JSON.parse(String(chimeraRunRecover.content?.[0]?.text ?? "{}"));
+  if (chimeraRunJson.record?.session?.opencodeSessionId !== "ses_mock_CH-0001") {
+    throw new Error("proteus_chimera_start auto-run did not attach the mock OpenCode session");
   }
   const chimeraServerUrl = chimeraRunJson.record?.session?.opencodeServerUrl;
   if (typeof chimeraServerUrl !== "string" || !chimeraServerUrl.startsWith("http://127.0.0.1:")) {
-    throw new Error("proteus_chimera_run did not persist a mock OpenCode server URL");
+    throw new Error("proteus_chimera_start auto-run did not persist a mock OpenCode server URL");
   }
   const mockRegistryPath = path.join(tmpRoot, ".vros", "chimera", "mock-opencode-sessions.json");
   fs.mkdirSync(path.dirname(mockRegistryPath), { recursive: true });
@@ -334,7 +343,7 @@ try {
   }
   const chimeraRunAfterWrongAttach = await request("tools/call", {
     name: "proteus_chimera_run",
-    arguments: { root: tmpRoot, id: "CH-0001", timeout: 10 }
+    arguments: { root: tmpRoot, id: "CH-0001", timeout: 10, message: "MCP resume instruction" }
   });
   const chimeraRunAfterWrongAttachJson = JSON.parse(String(chimeraRunAfterWrongAttach.content?.[0]?.text ?? "{}"));
   if (chimeraRunAfterWrongAttachJson.record?.run?.exitCode !== 0 || chimeraRunAfterWrongAttachJson.record?.session?.opencodeSessionId !== "ses_mock_CH-0001") {
@@ -343,6 +352,9 @@ try {
   const chimeraRunAfterWrongAttachRecord = JSON.parse(fs.readFileSync(path.join(tmpRoot, ".vros", "chimera", "sessions", "CH-0001", "opencode", "run.json"), "utf8"));
   if (chimeraRunAfterWrongAttachRecord.args.includes("ses_mock_wrong_workspace_CH_0001")) {
     throw new Error("proteus_chimera_run reused a stale OpenCode session id from another workspace");
+  }
+  if (!chimeraRunAfterWrongAttachRecord.args.some((arg) => String(arg).includes("MCP resume instruction"))) {
+    throw new Error("proteus_chimera_run did not pass the MCP resume instruction to OpenCode");
   }
   const chimeraWorkflowSnapshot = await request("tools/call", {
     name: "proteus_chimera_workflow_snapshot",
@@ -381,19 +393,13 @@ try {
   if (!String(chimeraAgentPoll.content?.[0]?.text ?? "").includes('"priority": true')) {
     throw new Error("proteus_chimera_send did not preserve priority metadata");
   }
-  await request("tools/call", {
+  const chimeraBroadcast = await request("tools/call", {
     name: "proteus_chimera_broadcast",
     arguments: { root: tmpRoot, message: "MCP shared chat", priority: true }
   });
-  const chimeraBroadcastPoll = await request("tools/call", {
-    name: "proteus_chimera_poll",
-    arguments: { root: tmpRoot, id: "CH-0001", unreadOnly: true, forAgent: true }
-  });
-  if (!String(chimeraBroadcastPoll.content?.[0]?.text ?? "").includes("MCP shared chat")) {
-    throw new Error("proteus_chimera_broadcast did not deliver shared chat to agent");
-  }
-  if (!String(chimeraBroadcastPoll.content?.[0]?.text ?? "").includes('"priority": true')) {
-    throw new Error("proteus_chimera_broadcast did not preserve priority metadata");
+  const chimeraBroadcastJson = JSON.parse(String(chimeraBroadcast.content?.[0]?.text ?? "{}"));
+  if (chimeraBroadcastJson.record?.delivered?.length !== 0 || !chimeraBroadcastJson.record?.skipped?.some((entry) => entry.publicId === "CH-0001" && entry.reason === "status stopped")) {
+    throw new Error("proteus_chimera_broadcast should skip stopped sessions");
   }
   await request("tools/call", {
     name: "proteus_chimera_snapshot",
@@ -403,8 +409,9 @@ try {
     name: "proteus_chimera_heartbeat",
     arguments: { root: tmpRoot, id: "CH-0001" }
   });
-  if (!String(chimeraHeartbeat.content?.[0]?.text ?? "").includes('"alive": true')) {
-    throw new Error("proteus_chimera_heartbeat did not report alive");
+  const chimeraHeartbeatJson = JSON.parse(String(chimeraHeartbeat.content?.[0]?.text ?? "{}"));
+  if (chimeraHeartbeatJson.record?.killed !== false || chimeraHeartbeatJson.record?.session?.publicId !== "CH-0001" || chimeraHeartbeatJson.record?.session?.status !== "stopped") {
+    throw new Error("proteus_chimera_heartbeat did not report stopped reusable session state");
   }
   const chimeraSwarm = await request("tools/call", {
     name: "proteus_chimera_swarm",
@@ -438,16 +445,16 @@ try {
   await waitForFile(path.join(tmpRoot, ".vros", "chimera", "sessions", "CH-0004", "opencode", "run.json"), 10000);
   await new Promise((resolve) => setTimeout(resolve, 1000));
   await request("tools/call", {
-    name: "proteus_chimera_relay",
-    arguments: { root: tmpRoot, fromId: "CH-0001", toId: "CH-0002", message: "MCP direct Chimera relay" }
+    name: "proteus_chimera_send",
+    arguments: { root: tmpRoot, fromId: "CH-0001", toId: "CH-0002", message: "MCP direct Chimera message" }
   });
-  const chimeraRelayPoll = await request("tools/call", {
+  const chimeraDirectPoll = await request("tools/call", {
     name: "proteus_chimera_poll",
     arguments: { root: tmpRoot, id: "CH-0002", unreadOnly: true, forAgent: true }
   });
-  const chimeraRelayPollText = String(chimeraRelayPoll.content?.[0]?.text ?? "");
-  if (!chimeraRelayPollText.includes("MCP direct Chimera relay") || !chimeraRelayPollText.includes('"fromId": "CH-0001"')) {
-    throw new Error("proteus_chimera_relay did not deliver direct agent-to-agent message metadata");
+  const chimeraDirectPollText = String(chimeraDirectPoll.content?.[0]?.text ?? "");
+  if (!chimeraDirectPollText.includes("MCP direct Chimera message") || !chimeraDirectPollText.includes('"fromId": "CH-0001"')) {
+    throw new Error("proteus_chimera_send did not deliver direct agent-to-agent message metadata");
   }
   const chimeraCouncil = await request("tools/call", {
     name: "proteus_chimera_council",
@@ -506,6 +513,23 @@ try {
   });
   if (!String(chimeraClose.content?.[0]?.text ?? "").includes('"closeVerdict": "watchlist"')) {
     throw new Error("proteus_chimera_close did not persist verdict");
+  }
+  const activeChimeraList = await request("tools/call", {
+    name: "proteus_chimera_list",
+    arguments: { root: tmpRoot, active: true }
+  });
+  const activeChimeraListText = String(activeChimeraList.content?.[0]?.text ?? "");
+  const activeChimeraListJson = JSON.parse(activeChimeraListText);
+  if (activeChimeraListJson.record?.sessions?.some((session) => session.publicId === "CH-0001" || session.status === "stopped")) {
+    throw new Error("proteus_chimera_list active=true returned stopped sessions");
+  }
+  const reusableChimeraList = await request("tools/call", {
+    name: "proteus_chimera_list",
+    arguments: { root: tmpRoot }
+  });
+  const reusableChimeraListJson = JSON.parse(String(reusableChimeraList.content?.[0]?.text ?? "{}"));
+  if (!reusableChimeraListJson.record?.sessions?.some((session) => session.publicId === "CH-0001" && session.status === "stopped" && session.closeVerdict === "watchlist") || !JSON.stringify(reusableChimeraListJson.record?.advisories).includes("Session is stopped")) {
+    throw new Error("proteus_chimera_list did not expose reusable stopped sessions with resume guidance");
   }
 
   await request("tools/call", {
@@ -622,7 +646,7 @@ try {
   }
   const updateBranch = await request("tools/call", {
     name: "proteus_update_branch",
-    arguments: { root: tmpRoot, id: 1, status: "testing" }
+    arguments: { root: tmpRoot, id: "B1", status: "testing" }
   });
   if (!String(updateBranch.content?.[0]?.text ?? "").includes('"status": "testing"')) {
     throw new Error("proteus_update_branch did not move branch to testing");
@@ -856,6 +880,7 @@ try {
   child.stdin.end();
   child.kill();
   await waitForExit(child, 2000);
+  killMockOpenCodeServers();
   rmTemp(tmpRoot);
   rmTemp(globalRoot);
   rmTemp(mergeSourceRoot);
@@ -882,10 +907,38 @@ async function waitForFile(filePath, timeoutMs) {
 }
 
 function rmTemp(target) {
+  let lastError = null;
+  const attempts = process.platform === "win32" ? 8 : 1;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 250 });
+      return;
+    } catch (error) {
+      lastError = error;
+      if (process.platform !== "win32") throw error;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 500);
+    }
+  }
+  if (lastError) {
+    console.warn(`warning: could not remove temp path ${target}: ${lastError.message}`);
+  }
+}
+
+function killMockOpenCodeServers() {
+  if (process.platform !== "win32") return;
   try {
-    fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 250 });
-  } catch (error) {
-    if (process.platform !== "win32") throw error;
-    console.warn(`warning: could not remove temp path ${target}: ${error.message}`);
+    execFileSync("powershell.exe", [
+      "-NoProfile",
+      "-Command",
+      "$mock=$env:PROTEUS_SMOKE_MOCK_OPENCODE; " +
+      "Get-CimInstance Win32_Process | " +
+      "Where-Object { $mock -and $_.CommandLine -like ('*' + $mock + '* serve *') } | " +
+      "ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"
+    ], {
+      env: { ...process.env, PROTEUS_SMOKE_MOCK_OPENCODE: mockOpenCode },
+      stdio: "ignore"
+    });
+  } catch {
+    // Best-effort cleanup for mock servers started by this smoke test.
   }
 }

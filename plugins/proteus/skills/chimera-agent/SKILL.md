@@ -147,6 +147,9 @@ Post progress:
 proteus chimera post --root <workspace-root> --kind message --body "..."
 ```
 
+Do not add `--priority` when posting to the coordinator. Priority steering is
+for messages whose destination is another OpenCode-backed Chimera agent.
+
 Post findings or blockers:
 
 ```text
@@ -175,15 +178,18 @@ research direction or save duplicate work:
 proteus chimera broadcast --root <workspace-root> --message "..."
 ```
 
-Send a direct relay to another Chimera agent when the message is specifically
-for that peer. When running inside your Chimera session, Proteus infers your
-own session id, so do not add `--from-id` unless the coordinator explicitly
-asks you to debug from outside the lab. If you must relay from outside your
-session directory, use `--from-id <CH-ID>`:
+Send a direct message to another Chimera agent when the message is specifically
+for that peer. Use `send`. When running inside your Chimera session, Proteus
+infers your own session id, so do not add
+`--from-id` unless the coordinator explicitly asks you to debug from outside
+the lab. If you must send from outside your session directory, use
+`--from-id <CH-ID>`:
 
 ```text
-proteus chimera relay --root <workspace-root> --to-id <CH-ID> --message "..." --priority
+proteus chimera send --root <workspace-root> --to-id <CH-ID> --message "..."
 ```
+
+Add `--priority` only when that peer should be nudged to poll soon.
 
 Treat shared chat as normal collaborative context, not a queue that must be
 answered item by item. You do not need to respond to every broadcast. If the
@@ -228,8 +234,8 @@ Your council turn should be useful without becoming a report:
 - one recommended next high-ROI move.
 
 Do not answer every other agent. Do not debate unless the coordinator asks for
-another round. Default to one contribution per round, then return to waiting or
-work. Do not manually pass the turn to another agent; after your `turn` command
+another round. Default to one contribution per round, then return to your
+assigned work or stop condition. Do not manually pass the turn to another agent; after your `turn` command
 Proteus automatically cues the next accepted participant when one remains. If
 the coordinator closes the council, follow the final instruction. If the final
 instruction does not redirect you, resume the previous branch from the last

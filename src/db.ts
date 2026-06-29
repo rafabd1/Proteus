@@ -1099,9 +1099,12 @@ export class ProteusDb {
     if (!current) throw new Error(`Chimera session not found: ${input.publicId}`);
     const status = input.status ?? current.status;
     const now = nowIso();
-    const closedAt = status === "closed" || status === "killed" || status === "failed" || status === "timeout"
-      ? now
-      : null;
+    const closeVerdict = input.closeVerdict === undefined ? current.closeVerdict : input.closeVerdict;
+    const closeSummary = input.closeSummary === undefined ? current.closeSummary : input.closeSummary;
+    const closeChanged = input.closeVerdict !== undefined || input.closeSummary !== undefined;
+    const closedAt = closeChanged
+      ? (closeVerdict || closeSummary ? now : null)
+      : current.closedAt;
     this.db
       .prepare(
         `UPDATE chimera_sessions
@@ -1115,8 +1118,8 @@ export class ProteusDb {
         input.opencodePid === undefined ? current.opencodePid : input.opencodePid,
         now,
         closedAt,
-        input.closeVerdict === undefined ? current.closeVerdict : input.closeVerdict,
-        input.closeSummary === undefined ? current.closeSummary : input.closeSummary,
+        closeVerdict,
+        closeSummary,
         input.opencodeServerUrl === undefined ? current.opencodeServerUrl : input.opencodeServerUrl,
         input.opencodeSessionId === undefined ? current.opencodeSessionId : input.opencodeSessionId,
         input.publicId
@@ -2922,9 +2925,10 @@ function normalizeChimeraTimeout(value: unknown): number {
 }
 
 function normalizeChimeraStatus(value: string): ChimeraStatus {
+  if (value === "starting" || value === "running" || value === "stopped") {
+    return value;
+  }
   if (
-    value === "starting" ||
-    value === "running" ||
     value === "ready" ||
     value === "waiting" ||
     value === "killed" ||
@@ -2932,9 +2936,9 @@ function normalizeChimeraStatus(value: string): ChimeraStatus {
     value === "failed" ||
     value === "timeout"
   ) {
-    return value;
+    return "stopped";
   }
-  return value.length > 0 ? "failed" : "starting";
+  return "stopped";
 }
 
 function normalizeChimeraAccessMode(value: string): ChimeraAccessMode {

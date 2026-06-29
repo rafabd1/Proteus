@@ -683,16 +683,19 @@ class ProteusDb {
             throw new Error(`Chimera session not found: ${input.publicId}`);
         const status = input.status ?? current.status;
         const now = nowIso();
-        const closedAt = status === "closed" || status === "killed" || status === "failed" || status === "timeout"
-            ? now
-            : null;
+        const closeVerdict = input.closeVerdict === undefined ? current.closeVerdict : input.closeVerdict;
+        const closeSummary = input.closeSummary === undefined ? current.closeSummary : input.closeSummary;
+        const closeChanged = input.closeVerdict !== undefined || input.closeSummary !== undefined;
+        const closedAt = closeChanged
+            ? (closeVerdict || closeSummary ? now : null)
+            : current.closedAt;
         this.db
             .prepare(`UPDATE chimera_sessions
          SET status = ?, opencode_pid = ?, updated_at = ?, closed_at = ?,
              close_verdict = ?, close_summary = ?,
              opencode_server_url = ?, opencode_session_id = ?
          WHERE public_id = ?`)
-            .run(status, input.opencodePid === undefined ? current.opencodePid : input.opencodePid, now, closedAt, input.closeVerdict === undefined ? current.closeVerdict : input.closeVerdict, input.closeSummary === undefined ? current.closeSummary : input.closeSummary, input.opencodeServerUrl === undefined ? current.opencodeServerUrl : input.opencodeServerUrl, input.opencodeSessionId === undefined ? current.opencodeSessionId : input.opencodeSessionId, input.publicId);
+            .run(status, input.opencodePid === undefined ? current.opencodePid : input.opencodePid, now, closedAt, closeVerdict, closeSummary, input.opencodeServerUrl === undefined ? current.opencodeServerUrl : input.opencodeServerUrl, input.opencodeSessionId === undefined ? current.opencodeSessionId : input.opencodeSessionId, input.publicId);
         this.indexFts("chimera_session", current.id, `${current.publicId}\n${status}\n${current.role}\n${current.goal}\n${input.closeVerdict ?? ""}\n${input.closeSummary ?? ""}`);
         return this.getChimeraSession(input.publicId);
     }
@@ -2029,17 +2032,18 @@ function normalizeChimeraTimeout(value) {
     return seconds;
 }
 function normalizeChimeraStatus(value) {
-    if (value === "starting" ||
-        value === "running" ||
-        value === "ready" ||
+    if (value === "starting" || value === "running" || value === "stopped") {
+        return value;
+    }
+    if (value === "ready" ||
         value === "waiting" ||
         value === "killed" ||
         value === "closed" ||
         value === "failed" ||
         value === "timeout") {
-        return value;
+        return "stopped";
     }
-    return value.length > 0 ? "failed" : "starting";
+    return "stopped";
 }
 function normalizeChimeraAccessMode(value) {
     if (value === "editor")

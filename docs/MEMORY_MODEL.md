@@ -505,9 +505,9 @@ proteus_chimera_run
 proteus_chimera_poll
 proteus_chimera_send
 proteus_chimera_broadcast
-proteus_chimera_relay
 proteus_chimera_council
 proteus_chimera_workflow_snapshot
+proteus_chimera_recover
 proteus_chimera_kill
 proteus_chimera_close
 proteus_ingest

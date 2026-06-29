@@ -1,11 +1,32 @@
 # Changelog
 
+## 2.0.2 - 2026-06-29
+
+### Fixed
+
+- Removed the separate Chimera relay command surface. Direct single-recipient messages now use `chimera send`/`proteus_chimera_send` for coordinator-to-agent and agent-to-agent flows, with optional source metadata handled by the unified path.
+- Changed Chimera `start` to auto-start OpenCode bootstrap by default and report `starting` during attachment instead of leaving new sessions in an ambiguous ready state.
+- Added Chimera session recovery for stale or inconsistent pid, status, and OpenCode session attachment state, including `chimera recover` and MCP `proteus_chimera_recover`.
+- Hardened `chimera run` so manual runs do not compete with sessions that are already starting or running, and added optional resume instructions through `--message`/`message`.
+- Changed priority delivery for parked sessions to use compact wake behavior for queued messages instead of treating every priority message as a full research rerun.
+- Changed OpenCode server selection to reuse an already healthy local OpenCode server in the managed range before starting a new one.
+- Improved Chimera polling visibility with control status, priority-pending state, delivery state, and recommended next command.
+- Added active Chimera session list filters through CLI `chimera list --active` and MCP `proteus_chimera_list active=true`.
+- Collapsed parked, closed, killed, failed, timed-out, and legacy waiting Chimera session states into reusable `stopped` sessions with verdict details stored separately.
+- Changed default Chimera list scope to sessions linked to active campaigns, including all active campaigns when more than one is open. Added campaign labels in list output and `--all`/`all=true` for historical sessions.
+- Accepted prefixed numeric ids such as `B8` in CLI/MCP numeric-id parsing.
+
+### Changed
+
+- Updated coordinator and Chimera docs/skills to explain when to use `start`, `send`, `broadcast`, `poll`, `workflow-snapshot`, `recover`, `run`, `kill`, and `close`, including the difference between queued messages, priority wake, and `run --message` resume.
+- Expanded CLI and MCP smoke coverage for auto-start, recovery, unified direct messaging, and prefixed branch ids.
+
 ## 2.0.0 - 2026-06-27
 
 ### Added
 
 - Added optional Chimera mode for OpenCode-backed secondary agents managed by Proteus.
-- Added Chimera CLI commands for config, doctor, start, swarm, council, send, broadcast, relay, post, snapshot, workflow-snapshot, heartbeat, run, wake, attach-opencode, poll, list, kill, close, and stop-server.
+- Added Chimera CLI commands for config, doctor, start, swarm, council, send, broadcast, post, snapshot, workflow-snapshot, heartbeat, run, wake, attach-opencode, poll, list, kill, close, and stop-server.
 - Added MCP tools matching the Chimera CLI control surface.
 - Added SQLite-backed Chimera sessions and messages with mirrored `.vros/chimera` session files, labs, JSONL inbox/outbox, snapshots, kill flags, and OpenCode logs.
 - Added coordinator-controlled Chimera access modes: default `explorer` and explicit `editor` per launched agent.
@@ -23,7 +44,7 @@
 - Updated the main coordinator skill to explain when to use Chimera, how to check config, how to poll unread messages, and how to choose `explorer` versus `editor` access.
 - Updated README and Chimera docs with the official OpenCode project link, GLM-style model/variant target config, CLI examples, swarm usage, MCP tools, broadcast chat, and access-mode guidance.
 - Consolidated human docs by replacing redundant planning/update documents with the current technical Chimera reference.
-- Expanded CLI and MCP smoke tests to cover Chimera config/start/post/poll/snapshot/workflow-snapshot/heartbeat/run/kill/close/swarm/council/relay flows, branch updates, no-timeout config, and MCP parity.
+- Expanded CLI and MCP smoke tests to cover Chimera config/start/post/poll/snapshot/workflow-snapshot/heartbeat/run/kill/close/swarm/council/direct-message flows, branch updates, no-timeout config, and MCP parity.
 
 ### Migration
 

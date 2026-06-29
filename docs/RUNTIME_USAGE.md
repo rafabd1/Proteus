@@ -319,7 +319,6 @@ proteus_chimera_start
 proteus_chimera_swarm
 proteus_chimera_council
 proteus_chimera_broadcast
-proteus_chimera_relay
 proteus_chimera_send
 proteus_chimera_post
 proteus_chimera_snapshot
@@ -329,6 +328,7 @@ proteus_chimera_run
 proteus_chimera_attach_opencode
 proteus_chimera_poll
 proteus_chimera_list
+proteus_chimera_recover
 proteus_chimera_kill
 proteus_chimera_close
 proteus_ingest

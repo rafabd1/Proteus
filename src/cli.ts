@@ -15,7 +15,7 @@ import {
   heartbeatChimeraSession,
   initChimeraConfig,
   killChimeraSession,
-  listChimeraSessions,
+  listChimeraSessionView,
   acceptChimeraCouncil,
   attachOpenCodeSession,
   cueChimeraCouncilTurn,
@@ -23,7 +23,7 @@ import {
   pollChimeraMessages,
   postChimeraCouncilTurn,
   postChimeraMessage,
-  relayChimeraMessage,
+  recoverChimeraSession,
   runChimeraSession,
   saveChimeraConfig,
   sendChimeraMessage,
@@ -42,7 +42,7 @@ import { planRound, renderRoundPlan } from "./planner";
 import { renderAgentPrompt } from "./prompts";
 import { ROLE_ORDER, ROLES } from "./roles";
 import { ensureDir, exportsDir, resolveTargetRoot } from "./paths";
-import type { AgentCodename, BranchStatus, CampaignStatus, ChimeraAccessMode, ChimeraMessageKind, HypothesisInput, JsonValue, RoiFactors, RoundStatus, SurfaceStatus } from "./types";
+import type { AgentCodename, BranchStatus, CampaignStatus, ChimeraAccessMode, ChimeraMessageKind, ChimeraStatus, HypothesisInput, JsonValue, RoiFactors, RoundStatus, SurfaceStatus } from "./types";
 
 interface ParsedArgs {
   command: string[];
@@ -260,16 +260,7 @@ function cmdChimera(db: ProteusDb, subcommand: string | undefined, parsed: Parse
       cmdChimeraCouncil(db, parsed.command[2], parsed);
       return;
     case "send":
-      console.log(JSON.stringify({
-        ok: true,
-        ...sendChimeraMessage(
-          db,
-          requiredString(parsed, "id"),
-          requiredString(parsed, "message"),
-          chimeraMessageKind(parsed, "kind", "message"),
-          { priority: getBoolean(parsed, "priority") }
-        )
-      }, null, 2));
+      console.log(JSON.stringify({ ok: true, ...sendChimeraOutbound(db, parsed) }, null, 2));
       return;
     case "post":
       console.log(JSON.stringify({
@@ -304,7 +295,10 @@ function cmdChimera(db: ProteusDb, subcommand: string | undefined, parsed: Parse
     case "run":
       {
         const id = requiredString(parsed, "id");
-        const run = runChimeraSession(db, id, getNumber(parsed, "timeout"));
+        const run = runChimeraSession(db, id, getNumber(parsed, "timeout"), {
+          internalRun: getBoolean(parsed, "internal-run"),
+          instruction: getString(parsed, "message") ?? getString(parsed, "instruction")
+        });
         console.log(JSON.stringify({ ok: true, run, session: db.getChimeraSession(id) }, null, 2));
       }
       return;
@@ -343,25 +337,19 @@ function cmdChimera(db: ProteusDb, subcommand: string | undefined, parsed: Parse
           body: requiredString(parsed, "message"),
           kind: chimeraMessageKind(parsed, "kind", "message"),
           fromId: optionalCurrentChimeraSessionId(db, parsed, "from-id"),
-          includeClosed: getBoolean(parsed, "include-closed"),
-          priority: getBoolean(parsed, "priority")
-        })
-      }, null, 2));
-      return;
-    case "relay":
-      console.log(JSON.stringify({
-        ok: true,
-        ...relayChimeraMessage(db, {
-          fromId: currentChimeraSessionId(db, parsed, "from-id"),
-          toId: requiredString(parsed, "to-id"),
-          body: requiredString(parsed, "message"),
-          kind: chimeraMessageKind(parsed, "kind", "message"),
           priority: getBoolean(parsed, "priority")
         })
       }, null, 2));
       return;
     case "list":
-      console.log(JSON.stringify(listChimeraSessions(db, { limit: getNumber(parsed, "limit") }), null, 2));
+      console.log(JSON.stringify(listChimeraSessionView(db, {
+        limit: getNumber(parsed, "limit"),
+        status: getBoolean(parsed, "active") ? "active" : chimeraListStatus(getString(parsed, "status")),
+        all: getBoolean(parsed, "all")
+      }), null, 2));
+      return;
+    case "recover":
+      console.log(JSON.stringify({ ok: true, ...recoverChimeraSession(db, requiredString(parsed, "id")) }, null, 2));
       return;
     case "kill":
       console.log(JSON.stringify(killChimeraSession(db, requiredString(parsed, "id"), requiredString(parsed, "reason")), null, 2));
@@ -375,8 +363,20 @@ function cmdChimera(db: ProteusDb, subcommand: string | undefined, parsed: Parse
       ), null, 2));
       return;
     default:
-      throw new Error("Usage: proteus chimera <config|doctor|stop-server|start|swarm|council|send|broadcast|relay|post|snapshot|workflow-snapshot|heartbeat|run|wake|attach-opencode|poll|list|kill|close>");
+      throw new Error("Usage: proteus chimera <config|doctor|stop-server|start|swarm|council|send|broadcast|post|snapshot|workflow-snapshot|heartbeat|run|wake|attach-opencode|poll|list|recover|kill|close>");
   }
+}
+
+function sendChimeraOutbound(db: ProteusDb, parsed: ParsedArgs): ReturnType<typeof sendChimeraMessage> {
+  const toId = getString(parsed, "to-id") ?? getString(parsed, "id");
+  const fromId = optionalCurrentChimeraSessionId(db, parsed, "from-id");
+  const body = requiredString(parsed, "message");
+  const kind = chimeraMessageKind(parsed, "kind", "message");
+  const priority = getBoolean(parsed, "priority");
+  if (!toId) {
+    throw new Error("Missing --id or --to-id. Use `chimera post` when a Chimera agent is sending to the coordinator.");
+  }
+  return sendChimeraMessage(db, toId, body, kind, { priority, fromId });
 }
 
 function cmdChimeraCouncil(db: ProteusDb, subcommand: string | undefined, parsed: ParsedArgs): void {
@@ -1209,7 +1209,7 @@ function requiredString(parsed: ParsedArgs, key: string): string {
 function getNumber(parsed: ParsedArgs, key: string): number | undefined {
   const value = getString(parsed, key);
   if (value === undefined) return undefined;
-  const number = Number(value);
+  const number = parseNumericId(value);
   if (!Number.isFinite(number)) throw new Error(`--${key} must be a number`);
   return number;
 }
@@ -1222,6 +1222,24 @@ function requiredNumber(parsed: ParsedArgs, key: string): number {
 
 function getBoolean(parsed: ParsedArgs, key: string): boolean {
   return parsed.flags[key] === true || parsed.flags[key] === "true";
+}
+
+function chimeraListStatus(value: string | undefined): "active" | ChimeraStatus | undefined {
+  if (value === undefined) return undefined;
+  if (
+    value === "active" ||
+    value === "starting" ||
+    value === "running" ||
+    value === "stopped"
+  ) return value;
+  throw new Error(`Invalid Chimera status filter: ${value}`);
+}
+
+function parseNumericId(value: string): number {
+  const trimmed = value.trim();
+  const prefixed = /^([A-Za-z])(\d+)$/.exec(trimmed);
+  const raw = prefixed ? prefixed[2] : trimmed;
+  return Number(raw);
 }
 
 function hasFlag(parsed: ParsedArgs, key: string): boolean {
@@ -1577,12 +1595,15 @@ Usage:
   proteus chimera config init|show|disable [--opencode-command <cmd>] [--server-url <url>] [--model <provider/model>] [--variant <variant>] [--timeout <seconds|0>]
   proteus chimera doctor [--root <path>]
   proteus chimera stop-server [--root <path>]
-  proteus chimera start --root <path> --role <role> --goal <text> [--campaign-id <id>] [--round-id <id>] [--access explorer|editor] [--access-notes <text>] [--run]
+  proteus chimera start --root <path> --role <role> --goal <text> [--campaign-id <id>] [--round-id <id>] [--access explorer|editor] [--access-notes <text>]
   proteus chimera swarm --root <path> --plan <json> [--run]
   proteus chimera council start|accept|open-round|cue-turn|turn|status|close --root <path>
-  proteus chimera send|broadcast|relay|post|snapshot|workflow-snapshot|heartbeat|run|wake|poll|list|kill|close --root <path>
-  proteus chimera run|wake --root <path> --id <CH-ID> [--timeout <seconds|0>]
-  proteus chimera relay --root <path> --to-id <CH-ID> --message <text> [--from-id <CH-ID>] [--priority]
+  proteus chimera send|broadcast|post|snapshot|workflow-snapshot|heartbeat|run|wake|poll|list|recover|kill|close --root <path>
+  proteus chimera run --root <path> --id <CH-ID> [--message <text>] [--timeout <seconds|0>]
+  proteus chimera wake --root <path> --id <CH-ID> [--timeout <seconds|0>]
+  proteus chimera list --root <path> [--active] [--status active|starting|running|stopped] [--all] [--limit <n>]
+  proteus chimera send --root <path> --id <CH-ID> --message <text> [--priority]
+  proteus chimera send --root <path> --to-id <CH-ID> --message <text> [--from-id <CH-ID>] [--priority]
   proteus chimera post|snapshot|heartbeat --root <path> [--id <CH-ID>]
   proteus chimera poll --root <path> --unread --agent [--id <CH-ID>]
   proteus ingest [--root <path>] [paths...]
