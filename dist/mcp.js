@@ -732,15 +732,15 @@ const tools = [
         description: "Render a Proteus specialist-agent prompt for a bounded surface.",
         inputSchema: schema({
             root: stringProp("Target root path."),
-            role: stringProp("Role codename: argus, loom, chaos, libris, mimic, artificer, or skeptic."),
+            role: stringProp("Role codename: generalist, argus, loom, chaos, libris, mimic, artificer, skeptic, or cicada. Case-insensitive display names are normalized."),
             surface: stringProp("Bounded surface assigned by the coordinator."),
             objective: stringProp("Round or front objective."),
             avoid: arrayProp("Known paths, claims, or surfaces to avoid.")
         }, ["root", "role", "surface"]),
         handler: ({ root, role, surface, objective, avoid }) => withDb(str(root), (db) => {
-            const codename = str(role);
-            if (!(codename in roles_1.ROLES))
-                throw new Error(`Unknown Proteus role: ${codename}`);
+            const codename = (0, roles_1.normalizeAgentCodename)(str(role));
+            if (!codename)
+                throw new Error(`Unknown Proteus role: ${str(role)}. Use one of: ${(0, roles_1.validRoleList)()}.`);
             const target = db.getTarget();
             return (0, prompts_1.renderAgentPrompt)({
                 codename,
@@ -1011,7 +1011,7 @@ const tools = [
         inputSchema: schema({
             root: stringProp(),
             roundId: numberProp(),
-            codename: stringProp(),
+            codename: stringProp("Canonical Proteus role codename: generalist, argus, loom, chaos, libris, mimic, artificer, skeptic, or cicada. Display-name casing is normalized; host subagent names are not roles."),
             roleFamily: stringProp(),
             assignedSurface: stringProp(),
             outputPath: stringProp(),
@@ -1023,10 +1023,14 @@ const tools = [
             validationStatus: stringProp()
         }, ["root", "roundId", "codename", "roleFamily", "assignedSurface"]),
         handler: (input) => withDb(str(input.root), (db) => {
+            const rawCodename = str(input.codename);
+            const codename = (0, roles_1.normalizeAgentCodename)(rawCodename);
+            if (!codename)
+                throw new Error(`Unknown Proteus role: ${rawCodename}. Use one of: ${(0, roles_1.validRoleList)()}. Host subagent names belong in assignedSurface or notes, not codename.`);
             const id = db.addAgentOutput({
                 roundId: num(input.roundId, 0),
-                codename: str(input.codename),
-                roleFamily: str(input.roleFamily),
+                codename,
+                roleFamily: roles_1.ROLES[codename].family,
                 assignedSurface: str(input.assignedSurface),
                 outputPath: maybeStr(input.outputPath) ?? "",
                 coveredSurface: stringArray(input.coveredSurface),

@@ -788,8 +788,8 @@ try {
     arguments: {
       root: tmpRoot,
       roundId: 1,
-      codename: "argus",
-      roleFamily: "intake",
+      codename: "Argus",
+      roleFamily: "host-subagent-label-should-be-normalized-away",
       assignedSurface: "Smoke daemon protocol surface",
       coveredSurface: ["daemon.ts"],
       liveCandidates: ["MCP smoke hypothesis"],
@@ -802,6 +802,16 @@ try {
   const agentOutputText = String(agentOutput.content?.[0]?.text ?? "");
   if (!agentOutputText.includes("active_campaign_linked") || !agentOutputText.includes("has_agent_output")) {
     throw new Error("proteus_record_agent_output did not auto-link to the active campaign");
+  }
+  const agentOutputJson = JSON.parse(agentOutputText);
+  const agentOutputRecord = await request("tools/call", {
+    name: "proteus_get_record",
+    arguments: { root: tmpRoot, entityType: "agent_output", entityId: agentOutputJson.record.entityId }
+  });
+  const agentOutputRecordJson = JSON.parse(String(agentOutputRecord.content?.[0]?.text ?? "{}"));
+  const normalizedAgentOutput = agentOutputRecordJson.record ?? agentOutputRecordJson;
+  if (normalizedAgentOutput.codename !== "argus" || normalizedAgentOutput.roleFamily !== "component-level-review") {
+    throw new Error("proteus_record_agent_output did not normalize display-name codename to canonical Proteus role");
   }
   const roles = await request("tools/call", { name: "proteus_roles", arguments: {} });
   if (!String(roles.content?.[0]?.text ?? "").includes("Argus")) {

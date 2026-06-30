@@ -8,7 +8,7 @@ import { defaultGlobalScopeFromTarget, GlobalMemoryDb } from "./global-memory";
 import { observeTarget } from "./observe";
 import { planRound, renderRoundPlan } from "./planner";
 import { renderAgentPrompt } from "./prompts";
-import { ROLE_ORDER, ROLES } from "./roles";
+import { ROLE_ORDER, ROLES, normalizeAgentCodename, validRoleList } from "./roles";
 import { exportMarkdown } from "./exporter";
 import { createLab } from "./lab";
 import {
@@ -892,7 +892,7 @@ const tools: ToolDefinition[] = [
     inputSchema: schema(
       {
         root: stringProp("Target root path."),
-        role: stringProp("Role codename: argus, loom, chaos, libris, mimic, artificer, or skeptic."),
+        role: stringProp("Role codename: generalist, argus, loom, chaos, libris, mimic, artificer, skeptic, or cicada. Case-insensitive display names are normalized."),
         surface: stringProp("Bounded surface assigned by the coordinator."),
         objective: stringProp("Round or front objective."),
         avoid: arrayProp("Known paths, claims, or surfaces to avoid.")
@@ -901,8 +901,8 @@ const tools: ToolDefinition[] = [
     ),
     handler: ({ root, role, surface, objective, avoid }) =>
       withDb(str(root), (db) => {
-        const codename = str(role) as AgentCodename;
-        if (!(codename in ROLES)) throw new Error(`Unknown Proteus role: ${codename}`);
+        const codename = normalizeAgentCodename(str(role));
+        if (!codename) throw new Error(`Unknown Proteus role: ${str(role)}. Use one of: ${validRoleList()}.`);
         const target = db.getTarget();
         return renderAgentPrompt({
           codename,
@@ -1224,7 +1224,7 @@ const tools: ToolDefinition[] = [
       {
         root: stringProp(),
         roundId: numberProp(),
-        codename: stringProp(),
+        codename: stringProp("Canonical Proteus role codename: generalist, argus, loom, chaos, libris, mimic, artificer, skeptic, or cicada. Display-name casing is normalized; host subagent names are not roles."),
         roleFamily: stringProp(),
         assignedSurface: stringProp(),
         outputPath: stringProp(),
@@ -1239,10 +1239,13 @@ const tools: ToolDefinition[] = [
     ),
     handler: (input) =>
       withDb(str(input.root), (db) => {
+        const rawCodename = str(input.codename);
+        const codename = normalizeAgentCodename(rawCodename);
+        if (!codename) throw new Error(`Unknown Proteus role: ${rawCodename}. Use one of: ${validRoleList()}. Host subagent names belong in assignedSurface or notes, not codename.`);
         const id = db.addAgentOutput({
           roundId: num(input.roundId, 0),
-          codename: str(input.codename),
-          roleFamily: str(input.roleFamily),
+          codename,
+          roleFamily: ROLES[codename].family,
           assignedSurface: str(input.assignedSurface),
           outputPath: maybeStr(input.outputPath) ?? "",
           coveredSurface: stringArray(input.coveredSurface),

@@ -7,6 +7,7 @@ export type JsonValue =
   | { [key: string]: JsonValue };
 
 export type AgentCodename =
+  | "generalist"
   | "argus"
   | "loom"
   | "chaos"

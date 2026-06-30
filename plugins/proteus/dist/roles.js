@@ -1,7 +1,24 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ROLE_ORDER = exports.ROLES = void 0;
+exports.normalizeAgentCodename = normalizeAgentCodename;
+exports.validRoleList = validRoleList;
 exports.ROLES = {
+    generalist: {
+        codename: "generalist",
+        displayName: "Generalist",
+        family: "generalist-triage",
+        purpose: "Run a bounded general triage front when no specialist role fits cleanly, preserving useful coverage, killed paths, and next-step recommendations without inventing a new codename.",
+        startsWhen: "The coordinator needs a broad but still bounded triage pass or a subagent result does not map cleanly to a specialist role.",
+        requiredOutput: [
+            "bounded scope reviewed",
+            "relevant context recovered",
+            "live candidates",
+            "killed or duplicate paths",
+            "watchlist items",
+            "recommended specialist follow-up"
+        ]
+    },
     argus: {
         codename: "argus",
         displayName: "Argus",
@@ -122,6 +139,7 @@ exports.ROLES = {
     }
 };
 exports.ROLE_ORDER = [
+    "generalist",
     "argus",
     "loom",
     "chaos",
@@ -131,3 +149,24 @@ exports.ROLE_ORDER = [
     "skeptic",
     "cicada"
 ];
+function normalizeAgentCodename(value) {
+    const normalized = String(value ?? "")
+        .trim()
+        .toLowerCase()
+        .replace(/^proteus[-_:]/, "")
+        .replace(/\s+/g, "-");
+    if (!normalized)
+        return null;
+    if (Object.prototype.hasOwnProperty.call(exports.ROLES, normalized))
+        return normalized;
+    for (const codename of exports.ROLE_ORDER) {
+        const role = exports.ROLES[codename];
+        const display = role.displayName.toLowerCase().replace(/\s+/g, "-");
+        if (normalized === display)
+            return codename;
+    }
+    return null;
+}
+function validRoleList() {
+    return exports.ROLE_ORDER.join(", ");
+}

@@ -235,6 +235,7 @@ gates, duplicate checks, and final kill/promote decisions.
 
 | Front | Focus |
 | --- | --- |
+| Generalist | Bounded triage and routing when no specialist role fits cleanly. |
 | Argus, codebase research | Architecture, dataflow, trust boundaries, invariants, side effects, and high-ROI surfaces. |
 | Loom, chaining | Non-obvious chains across components, state transitions, side effects, and capability amplification. |
 | Chaos, fuzzing | Calibrated probes, harnesses, differential behavior, parser/state-machine learning, and edge cases. |

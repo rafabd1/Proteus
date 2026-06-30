@@ -40,7 +40,7 @@ import { defaultGlobalScopeFromTarget, GlobalMemoryDb, globalMemoryLocation } fr
 import { observeTarget } from "./observe";
 import { planRound, renderRoundPlan } from "./planner";
 import { renderAgentPrompt } from "./prompts";
-import { ROLE_ORDER, ROLES } from "./roles";
+import { ROLE_ORDER, ROLES, normalizeAgentCodename, validRoleList } from "./roles";
 import { ensureDir, exportsDir, resolveTargetRoot } from "./paths";
 import type { AgentCodename, BranchStatus, CampaignStatus, ChimeraAccessMode, ChimeraMessageKind, ChimeraStatus, HypothesisInput, JsonValue, RoiFactors, RoundStatus, SurfaceStatus } from "./types";
 
@@ -698,9 +698,9 @@ function cmdRoles(): void {
 }
 
 function cmdPrompt(db: ProteusDb, parsed: ParsedArgs): void {
-  const codename = getString(parsed, "role") as AgentCodename | undefined;
-  if (!codename || !(codename in ROLES)) {
-    throw new Error(`Use --role with one of: ${ROLE_ORDER.join(", ")}`);
+  const codename = normalizeAgentCodename(getString(parsed, "role"));
+  if (!codename) {
+    throw new Error(`Use --role with one of: ${validRoleList()}. Role names are canonical codenames; use --surface for custom labels.`);
   }
   const target = db.getTarget();
   const prompt = renderAgentPrompt({
@@ -804,8 +804,9 @@ function cmdRecord(db: ProteusDb, subcommand: string | undefined, parsed: Parsed
   }
 
   if (subcommand === "agent-output") {
-    const role = requiredString(parsed, "role") as AgentCodename;
-    if (!(role in ROLES)) throw new Error(`Unknown role: ${role}`);
+    const rawRole = requiredString(parsed, "role");
+    const role = normalizeAgentCodename(rawRole);
+    if (!role) throw new Error(`Unknown role: ${rawRole}. Use one of: ${validRoleList()}. For generic triage use --role generalist; put custom names in --surface.`);
     const id = db.addAgentOutput({
       roundId: requiredNumber(parsed, "round-id"),
       codename: role,
@@ -1617,7 +1618,7 @@ Usage:
   proteus branch update --id <id> --status open|testing|killed|promoted|blocked
   proteus link --from-type <type> --from-id <id> --relation <text> --to-type <type> --to-id <id>
   proteus roles
-  proteus prompt --role <argus|loom|chaos|libris|mimic|artificer|skeptic|cicada> --surface <text>
+  proteus prompt --role <generalist|argus|loom|chaos|libris|mimic|artificer|skeptic|cicada> --surface <text>
   proteus record surface --name <text> [--family <text>] [--files a,b] [--status active|covered|exhausted|low_roi|blocked|watch]
   proteus record hypothesis --title <text> [--surface-id <id>] [--impact <text>]
   proteus record evidence --title <text> [--kind <kind>] [--body <text>]
@@ -1639,6 +1640,9 @@ Usage:
   proteus learn add --title <text> [--category <category>] [--scope <scope>] [--body <text>] [--tags a,b]
   proteus learn query [text] [--scope <scope>] [--category <category>] [--target-scope]
   proteus learn export [--out <path>]
+
+Role codenames are canonical Proteus roles. Host subagent names or nicknames
+belong in --surface, --objective, or notes, not --role.
 `);
 }
 

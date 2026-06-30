@@ -84,18 +84,23 @@ superseded --keep-latest`, then inspect the remaining planned round.
 Record global reusable lessons with `proteus learn add` only when they are not
 target-specific vulnerability claims.
 
-## Claude Code Subagents
+## Host Subagents
 
-When Claude Code subagents are available, delegate bounded independent fronts:
+When Claude Code, Codex, or another host can launch subagents, delegate bounded
+independent fronts. Keep host subagent names separate from Proteus codenames:
+`--role` and `codename` must use one canonical Proteus value. Put host-specific
+labels or nicknames in the surface/objective text instead. Use `generalist`
+for bounded triage that does not fit a specialist.
 
-- `proteus-argus`: component-level review;
-- `proteus-loom`: macro/chaining analysis;
-- `proteus-chaos`: fuzzing and edge-case generation;
-- `proteus-libris`: docs, contract, public intel, and timeline verification;
-- `proteus-mimic`: runtime, adapter, and environment divergence;
-- `proteus-artificer`: realistic PoC/lab/report-draft construction;
-- `proteus-skeptic`: devil's advocate and pre-claim refutation;
-- `proteus-cicada`: exploit-development, bypass, and chaining for branches with concrete signal.
+- `generalist`: bounded generic triage and routing;
+- `argus`: component-level review;
+- `loom`: macro/chaining analysis;
+- `chaos`: fuzzing and edge-case generation;
+- `libris`: docs, contract, public intel, and timeline verification;
+- `mimic`: runtime, adapter, and environment divergence;
+- `artificer`: realistic PoC/lab/report-draft construction;
+- `skeptic`: devil's advocate and pre-claim refutation;
+- `cicada`: exploit-development, bypass, and chaining for branches with concrete signal.
 
 Never delegate "review the repo". Assign one surface, one heuristic family,
 expected evidence, and kill criteria.
@@ -213,5 +218,5 @@ must write the JSON first. The packaged template is
 }
 ```
 
-Valid `codename` values are `argus`, `loom`, `chaos`, `libris`, `mimic`,
-`artificer`, `skeptic`, and `cicada`.
+Valid `codename` values are `generalist`, `argus`, `loom`, `chaos`, `libris`,
+`mimic`, `artificer`, `skeptic`, and `cicada`.

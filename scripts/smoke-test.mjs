@@ -813,12 +813,16 @@ try {
   run(["ingest", "docs"]);
   run(["observe"]);
   const roles = run(["roles"]);
-  if (!roles.includes("Argus") || !roles.includes("Skeptic")) {
+  if (!roles.includes("Generalist") || !roles.includes("Argus") || !roles.includes("Skeptic")) {
     throw new Error("roles did not list expected Proteus fronts");
   }
-  const prompt = run(["prompt", "--role", "skeptic", "--surface", "Smoke request surface"]);
+  const prompt = run(["prompt", "--role", "Skeptic", "--surface", "Smoke request surface"]);
   if (!prompt.includes("Skeptic") || !prompt.includes("Smoke request surface")) {
-    throw new Error("prompt did not render expected role instructions");
+    throw new Error("prompt did not normalize display-name role instructions");
+  }
+  const generalistPrompt = run(["prompt", "--role", "generalist", "--surface", "Smoke generalist triage"]);
+  if (!generalistPrompt.includes("Generalist") || !generalistPrompt.includes("Smoke generalist triage")) {
+    throw new Error("prompt did not render generalist role instructions");
   }
   run([
     "record",
@@ -982,7 +986,7 @@ try {
     "--round-id",
     "1",
     "--role",
-    "argus",
+    "Argus",
     "--surface",
     "Smoke request surface",
     "--covered",

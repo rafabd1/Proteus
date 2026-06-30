@@ -3149,6 +3149,25 @@ function materializeRecord(entityType: string, row: Row): Record<string, unknown
   if (entityType === "hypothesis_branch" || entityType === "branch") {
     return { entityType: "hypothesis_branch", ...toHypothesisBranchRow(row) };
   }
+  if (entityType === "agent_output") {
+    return {
+      entityType,
+      id: Number(row.id),
+      targetId: Number(row.target_id),
+      roundId: Number(row.round_id),
+      codename: String(row.agent_codename),
+      roleFamily: String(row.agent_role_family),
+      assignedSurface: String(row.assigned_surface),
+      outputPath: String(row.output_path ?? ""),
+      coveredSurface: parseJson(String(row.covered_surface_json ?? "[]")),
+      liveCandidates: parseJson(String(row.live_candidates_json ?? "[]")),
+      killedHypotheses: parseJson(String(row.killed_hypotheses_json ?? "[]")),
+      probes: parseJson(String(row.probes_json ?? "[]")),
+      uncoveredAreas: parseJson(String(row.uncovered_areas_json ?? "[]")),
+      validationStatus: String(row.validation_status),
+      createdAt: String(row.created_at)
+    };
+  }
   return { entityType, ...row };
 }
 

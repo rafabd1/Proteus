@@ -34,8 +34,9 @@ they are available in the session:
   long-running work, or research objectives that should persist until explicit
   stop conditions are met.
 - Use subagents for independent, bounded Proteus fronts when delegation is
-  available and allowed. Assign one codename and one surface per subagent:
-  Argus, Loom, Chaos, Libris, Mimic, Artificer, Skeptic, or Cicada.
+  available and allowed. Assign one canonical Proteus codename and one surface
+  per subagent. Host subagent names are not Proteus roles. Valid codenames are
+  Generalist, Argus, Loom, Chaos, Libris, Mimic, Artificer, Skeptic, or Cicada.
 - Keep the coordinator in charge of ROI selection, memory updates, validation
   gates, duplicate checks, kill/promote decisions, and replanning.
 - Fall back to serial local execution when goal mode, subagents, MCP tools, or
@@ -172,6 +173,7 @@ node dist/cli.js prompt --role argus --surface "Auth/session boundary" --objecti
 Valid roles:
 
 ```text
+generalist
 argus
 loom
 chaos
@@ -384,9 +386,9 @@ Claude Code uses the project-level MCP configuration at:
 node dist/cli.js update surface --root C:\path\to\target --id 1 --status exhausted --revisit "Only reopen on new runtime mode or new chain dependency"
 ```
 
-Use this after a round when Argus, Loom, Chaos, Libris, Mimic, Artificer, or
-Skeptic has exhausted or downgraded a surface. The planner uses these status
-fields to avoid repeated low-ROI work.
+Use this after a round when Generalist, Argus, Loom, Chaos, Libris, Mimic,
+Artificer, Skeptic, or Cicada has exhausted or downgraded a surface. The planner
+uses these status fields to avoid repeated low-ROI work.
 
 ## Agent Output Records
 

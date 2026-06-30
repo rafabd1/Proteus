@@ -410,16 +410,21 @@ Use the dedicated skills for tactical execution:
 - `chimera-agent`: instructions for OpenCode-backed secondary agents operating
   inside Chimera sessions.
 
-Use role contracts for delegated fronts:
+Use canonical Proteus role codenames for delegated fronts and records. These
+are not host subagent names or arbitrary nicknames. If Codex, Claude, or another
+host labels a subagent with an internal name, put that label in the objective,
+surface, or note, not in `--role`. For generic triage that does not fit a
+specialist, use `generalist`.
 
-- Argus: component-level primitive review.
-- Loom: macro chaining and cross-component reasoning.
-- Chaos: fuzzing and edge-case generation.
-- Libris: docs/contract/intelligence verification.
-- Mimic: runtime, adapter, deployment, and environment divergence.
-- Artificer: realistic PoC/lab validation.
-- Skeptic: adversarial refutation and downgrade pressure.
-- Cicada: exploit-development, bypass, reliability, and chaining for branches
+- `generalist`: bounded generic triage and routing.
+- `argus`: component-level primitive review.
+- `loom`: macro chaining and cross-component reasoning.
+- `chaos`: fuzzing and edge-case generation.
+- `libris`: docs/contract/intelligence verification.
+- `mimic`: runtime, adapter, deployment, and environment divergence.
+- `artificer`: realistic PoC/lab validation.
+- `skeptic`: adversarial refutation and downgrade pressure.
+- `cicada`: exploit-development, bypass, reliability, and chaining for branches
   that already have concrete signal and a known blocker.
 
 Artificer starts only after initial gates have enough evidence. Skeptic starts
@@ -444,6 +449,11 @@ proteus-artificer.md
 proteus-skeptic.md
 proteus-cicada.md
 ```
+
+`generalist` is a canonical Proteus codename for bounded generic triage. It
+does not replace a host subagent name and does not require a separate
+`proteus-generalist.md` contract; use the base contract plus the specific
+objective, surface, evidence, and kill criteria.
 
 Template filenames:
 
